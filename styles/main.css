@@ -1,0 +1,30 @@
+body {
+    margin: 0px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+}
+
+.header-right {
+    text-align: right;
+}
+.header-right p{
+    margin: 5px 0px;
+}
+
+.header-right a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img.github_logo {
+    width: 50px; /* 원하는 너비로 설정 */
+    height: auto; /* 높이를 자동으로 조정하여 비율 유지 */
+}

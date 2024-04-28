@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <title>12 Chess</title>
+        <link rel="stylesheet" href="./12chess.css">
+    </head>
+    <body>
+        <div class="hide" id="header">
+            <div id="back_main">
+                <a name="Back to main"id="back_main_button" href="main.html"><img id="back_img" src="./undo.png" alt="Back to main"></a>
+            </div>
+            <h1>12 Chess</h1>
+        </div>
+
+        <div class="hide" id="choose_box">
+            <div id="inform_text">
+                Choose your play type!
+            </div>
+            <div>
+                <button class="choose_button" id="one_player_button" type="button">1 Player</button>
+                <button class="choose_button" id="two_player_button" type="button">2 Player</button>
+            </div>
+            <div id="show_img">
+                <img class="player_img" id="one_player_img" src="./user.png" alt="One player">
+                <img class="player_img" id="two_player_img" src="./users.png" alt="Two player">
+            </div>
+        </div>
+
+        <div id = "game_box">
+            <div id="game_header">
+                
+            </div>
+            <canvas id="hint"></canvas>
+            <canvas id="game_board"></canvas>
+        </div>
+
+
+        <script type="text/javascript" src="./12chess.js"></script>
+    </body>
+</html>
