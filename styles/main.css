@@ -1,6 +1,6 @@
 body {
-    margin-left: 7%;
-    margin-right: 7%;
+    margin-left: 8%;
+    margin-right: 8%;
     margin-top: 2%;
 }
 
@@ -32,7 +32,8 @@ a:hover {
 
 #main_introduce {
     text-align: center;
-    margin: 8%;
+    margin-top: 8%;
+    margin-bottom: 4%;
 }
 
 #main_introduce h2 {
@@ -53,23 +54,37 @@ a:hover {
 #main_menu {
     display: flex;
     justify-content: space-between;
+    width: 70%;
+    margin: 0 auto;
 }
 
 .menu {
     width: 40%;
-    padding-top: 24%; /*세로를 가로 비율에 맞춤*/
-    background-color: #EBD57A;
     text-align: center;
+    aspect-ratio: 1 / 1;
+    display: flex; /* Flexbox 모델을 사용 */
+    justify-content: center; /* 가로 중앙 정렬 */
+    align-items: center; /* 세로 중앙 정렬 */
+    border-radius: 5%;
+    font-size: 350%;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.menu:hover {
+    font-size: 400%;
+    background-color: rgb(253, 253, 164);
 }
 
 #menu_left {
     margin: 0;
+    border: solid red 0.5rem;
 }
 
 #menu_right {
     margin: 0;
+    border: solid blue 0.5rem;
 }
-
 
 
 
