@@ -1,6 +1,3 @@
-let one_player_button = document.getElementById("one_player_button");
-let two_player_button = document.getElementById("two_player_button");
-
 /*  player: player가 green인지 red인지 확인
     kind: unit의 종류 확인
     sX: 그리기 시작하는 X좌표
@@ -1427,10 +1424,4 @@ function hide_img_two() {
     player.style.visibility = "hidden";
 }
 
-one_player_button.addEventListener("click", solo_game_start);
-two_player_button.addEventListener("click", multi_game_start);
-
-one_player_button.addEventListener("mouseover", show_img_one);
-one_player_button.addEventListener("mouseout", hide_img_one);
-two_player_button.addEventListener("mouseover", show_img_two);
-two_player_button.addEventListener("mouseout", hide_img_two);
+multi_game_start();
