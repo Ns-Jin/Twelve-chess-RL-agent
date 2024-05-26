@@ -140,6 +140,7 @@ export class Environment {
                     let new_j = unit[1] + action[1];
                     // action을 수행했는데 보드 밖으로 나가지 않고 같이 팀이 없어야 액션에 추가
                     if(new_i >= 2 && new_i <= 5 && new_j >= 0 && new_j <= 2 && turn == this.state[new_i][new_j].team) {
+                        // 만약 상대의 말을 잡는다면 reward를 그에맞게 리턴
                         possible_actions.push([unit, [new_i, new_j], 0]);
                     }
                 }
