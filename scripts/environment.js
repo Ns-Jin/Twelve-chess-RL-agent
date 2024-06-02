@@ -27,7 +27,8 @@ export class Environment {
         ];
         this.board_row = this.board[0].length;
         this.board_col = this.board.length;
-        this.canvas = this._build_canvas()
+        this.canvas = this._build_canvas();
+        this.who_turn = 'red';
         
     }
 
@@ -98,9 +99,35 @@ export class Environment {
         return in_pocket;
     }
 
+    /* 턴을 넘기는 업데이트
+        this.who_turn을 업데이트 */
+    _update_turn() {
+        if(this.who_turn == 'red') {
+            this.who_turn == 'green';
+        }
+        else {
+            this.who_turn == 'red';
+        }
+    }
+
+    /* action을 수행하여 state를 업데이트
+        parameter: action
+            {'current_location': [x,y], 'next_location': [x',y']} x,y의 말을 x',y'로 이동
+        return: reward
+            현재  */
+    _update_state(action) {
+        
+    }
+
+    /* 보드를 업데이트
+    */
+    _render() {
+
+    }
+
     /********************************* public *********************************/
-    /* state 초기화 */
-    reset_state() {
+    /* state, turn 초기화 */
+    reset() {
         this.state = [
             [공, 공, 공],
             [공, 공, 공],
@@ -111,6 +138,7 @@ export class Environment {
             [공, 공, 공],
             [공, 공, 공]
         ];
+        this.who_turn = 'red';
     }
 
     /* 플레이어가 할 수 있는 actions
@@ -150,17 +178,23 @@ export class Environment {
         return possible_actions
     }
 
-    // action을 수행, state를 업데이트
-    // 여기서 action: {'unit': 유닛이름, 'location': [x,y]} 움직일 유닛 이름과 움직일 위치를 확인
-    update_state(action) {
-
-    }
-
-    // episode step
+    /* episode step
+        return reward
+            해당 step을 통해 얻는 reward*/
     step(action) {
-        // 행동을 하고
+        // 행동을 하고 그에따라 state를 업데이트 하고
+        let reward = this._update_state(action);
+        let done = false;
+        let turn = this.who_turn;
         // 랜더링 하고
-        // 상대방이 어떤 행동을 하고
-        // 랜더링 하고
+        this._render()
+        // 게임이 끝났는지 확인
+        if(reward == 1) {
+            done = true;
+        }
+        // 턴을 넘김
+        _update_turn()
+        
+        return {turn, reward, done}
     }
 }
