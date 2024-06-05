@@ -4,13 +4,15 @@
 
 export const 공 = {num: 0, reward: 0};
 export const red_장 = {num: 1, reward: 0.5, team: 'red', actions: [[1,0],[0,1],[-1,0],[0,-1]]};
-export const red_왕 = {num: 2, reward: 1, team: 'red', actions: [[1,0],[0,1],[-1,0],[0,-1], [1,1],[-1,1],[1,-1],[-1,-1]]};
+export const red_왕 = {num: 2, reward: 1, team: 'red', actions: [[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]};
 export const red_상 = {num: 3, reward: 0.5, team: 'red', actions: [[1,1],[-1,1],[1,-1],[-1,-1]]};
 export const red_자 = {num: 4, reward: 0.25, team: 'red', actions: [[-1,0]]};
-export const green_장 = {num: 5, reward: 0.5, team: 'green', actions: [[1,0],[0,1],[-1,0],[0,-1]]};
-export const green_왕 = {num: 6, reward: 1, team: 'green', actions: [[1,0],[0,1],[-1,0],[0,-1], [1,1],[-1,1],[1,-1],[-1,-1]]};
-export const green_상 = {num: 7, reward: 0.5, team: 'green', actions: [[1,1],[-1,1],[1,-1],[-1,-1]]};
-export const green_자 = {num: 8, reward: 0.25, team: 'green', actions: [[1,0]]};
+export const red_후 = {num: 5, reward: 0.25, team: 'red', actions: [[1,0],[0,1],[-1,0],[0,-1],[1,-1],[-1,-1]]};
+export const green_장 = {num: 6, reward: 0.5, team: 'green', actions: [[1,0],[0,1],[-1,0],[0,-1]]};
+export const green_왕 = {num: 7, reward: 1, team: 'green', actions: [[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]};
+export const green_상 = {num: 8, reward: 0.5, team: 'green', actions: [[1,1],[-1,1],[1,-1],[-1,-1]]};
+export const green_자 = {num: 9, reward: 0.25, team: 'green', actions: [[1,0]]};
+export const green_후 = {num: 10, reward: 0.25, team: 'green', actions: [[1,0],[0,1],[-1,0],[0,-1],[1,1],[1,-1]]};
 
 export class Environment {
     constructor() {
@@ -25,13 +27,17 @@ export class Environment {
             [공, 공, 공],
             [공, 공, 공]
         ];
-        this.board_row = this.board[0].length;
-        this.board_col = this.board.length;
-        this.canvas = this._build_canvas()
+        this.board_row = this.state[0].length;
+        this.board_col = this.state.length;
+        this.canvas = this._build_canvas();
         
     }
 
     /********************************* private *********************************/
+    /* 게임이 실행될 canvas 초기화 */
+    _build_canvas() {
+
+    }
 
     /* 플레이어가 가진 말 탐색
         parameter: turn
