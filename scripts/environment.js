@@ -189,7 +189,6 @@ export class Environment {
             for (let j = 0; j < 3; j++) {
                 if (temp_state[i][j].num === 0) {
                     temp_state[i][j] = exchanged_unit;
-                    console.log("turn: ", turn, ",unit_num: ", unit_num, ", exchanged_unit: ", exchanged_unit.num);
                     return temp_state;
                 }
             }
