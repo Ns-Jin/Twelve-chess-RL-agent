@@ -1,50 +1,70 @@
 <!DOCTYPE html>
 <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <title>project</title>
-        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"> </script>
-        <!-- <link rel="stylesheet" href="./styles/index.css"> -->
-    </head>
-    <body>
-        <header>
-            강화학습 에이전트 학습
-        </header>
-        <div id="main_container">
-            <form id="modelConfigForm">
-                <div>
+<head>
+    <meta charset="UTF-8">
+    <title>Project - 강화학습 에이전트 학습</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="../styles/agent_learning.css">
+</head>
+<body>
+    <header>
+        <img src="../images/back_icon.png" alt="Back" id="back_icon">
+        <h1>강화학습 에이전트 학습</h1>
+    </header>
+    <div id="main_container">
+        <div id="left_container">
+            <form id="modelConfigForm" class="form-container">
+                <div class="form-group">
                     <label for="episodes">Learning episodes (1000 to 50000):</label>
                     <input type="text" id="episodes" name="episodes" placeholder="1000" value="1000" required>
                 </div>
-                <div>
+                <div class="form-group">
                     <label for="modelArchitecture">Model Architecture (e.g., 32,64-32, 128-64-32):</label>
                     <input type="text" id="modelArchitecture" name="modelArchitecture" placeholder="128-64-32" value="128-64-32" required pattern="^\d+(-\d+)*$">
                 </div>
-                <div>
+                <div class="form-group">
                     <label for="discountFactor">Discount Factor (0.95 to 0.999):</label>
                     <input type="number" id="discountFactor" name="discountFactor" step="0.001" min="0.95" max="0.999" placeholder="0.99" value="0.99" required>
                 </div>
-                <div>
+                <div class="form-group">
                     <label for="learningRate">Learning Rate (0.0001 to 0.1):</label>
                     <input type="number" id="learningRate" name="learningRate" step="0.0001" min="0.0001" max="0.1" placeholder="0.001" value="0.001" required>
                 </div>
-                <div>
+                <div class="form-group">
                     <label for="batchSize">Batch Size (16 to 128):</label>
-                    <input type="number" id="batchSize" name="batchSize" min="16" max="128" placeholder="64" placeholder="64" value="64" required>
+                    <input type="number" id="batchSize" name="batchSize" min="16" max="128" placeholder="64" value="64" required>
                 </div>
-                <div>
+                <div class="form-group">
                     <label for="render">Render:</label>
                     <select id="render" name="render">
                         <option value="true">True</option>
                         <option value="false">False</option>
                     </select>
                 </div>
-                <button type="submit">Submit</button>
+                <button type="submit" class="submit-btn">Submit</button>
             </form>
         </div>
-        
-    </body>
+        <div id="right_container">
+            <div id="render_area">
+                <!-- 렌더링 내용이 여기에 표시됩니다 -->
+            </div>
+            <div id="slider_container">
+                <label for="renderSpeed">Render speed: <span id="renderSpeedValue">200ms</span></label>
+                <input type="range" id="renderSpeed" name="renderSpeed" min="0" max="1000" value="200">
+            </div>
+        </div>
+    </div>
+    <div id="plot_container">
+        <div id="plot"></div>
+    </div>
     <script type="module" src="../scripts/environment.js"></script>
     <script type="module" src="../scripts/DQNAgent.js"></script>
     <script type="module" src="../scripts/train.js"></script>
+    <script>
+        document.getElementById('back_icon').addEventListener('click', function() {
+            window.location.href = '../index.html';
+        });
+    </script>
+</body>
 </html>

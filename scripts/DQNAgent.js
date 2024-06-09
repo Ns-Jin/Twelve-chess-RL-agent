@@ -73,11 +73,24 @@ export class Deque {
             this.length++;
         }
     }
+
+    toArray() {
+        const arr = [];
+        let current = this.head;
+        while (current) {
+            arr.push(current.value);
+            current = current.next;
+        }
+        return arr;
+    }
 }
 
 
+
 export class DQNAgent {
-    constructor(state_size, action_size, model_architecture, discount_factor, learning_rate, batch_size, render) {
+    constructor(turn, state_size, action_size, model_architecture, discount_factor, learning_rate, batch_size, render) {
+        this.turn = turn;
+        
         this.render = render;
 
         this.state_size = state_size;
@@ -90,10 +103,10 @@ export class DQNAgent {
         this.epsilon_min = 0.005
         this.epsilon_decay = (this.epsilon - this.epsilon_min) / 50000
         this.batch_size = batch_size            // 64
-        this.train_start = 1000                 // 학습 시작 시점
+        this.train_start = 500                 // 학습 시작 시점
 
         // 리플레이 메모리, 최대 크기 설정
-        this.queue_len_max = 5000
+        this.queue_len_max = 3000
         this.memory = new Deque(this.queue_len_max)
 
         // 학습 모델, 타겟 모델 똑같이 생성
@@ -121,53 +134,92 @@ export class DQNAgent {
         this.target_model.setWeights(this.model.getWeights());
     }
 
-    get_action(state) {
+    /* 현재 state에서 action 선택
+        parameter: state
+            현재 상태를 선택
+        parameter: possible_actions
+            현재 상태에서 가능한 actions
+        return: action
+            현재 상태에서 수행할 수 있는 action을 반환 */
+    get_action(state, possible_actions) {
         if (Math.random() <= this.epsilon) {
-            return Math.floor(Math.random() * this.action_size);
-        } else {
+            const random_index = Math.floor(Math.random() * possible_actions.length);
+            return possible_actions[random_index];
+        }
+        else {
             return tf.tidy(() => {
-                const q_values = this.model.predict(tf.tensor2d([state]));
-                return q_values.argMax(1).dataSync()[0];
+                const q_values = this.model.predict(tf.tensor2d(state.flat(), [1, this.state_size]));
+                const q_values_array = q_values.arraySync()[0];
+                
+                // 선택 가능한 행동들만 고려하도록 마스킹 적용
+                const masked_q_values = q_values_array.map((value, index) => {
+                    return possible_actions.includes(index) ? value : -Infinity;
+                });
+
+                // 최대값의 인덱스를 선택
+                const max_index = masked_q_values.indexOf(Math.max(...masked_q_values));
+                return max_index;
             });
         }
     }
 
-    append_sample(state, action, reward, nextState, done) {
-        this.memory.push({ state, action, reward, nextState, done });
+
+    append_sample(state, action, reward, next_state, done) {
+        this.memory.push({ state, action, reward, next_state, done });
         if (this.epsilon > this.epsilon_min) {
             this.epsilon -= this.epsilon_decay;
         }
     }
 
+    get_random_indices(array_length, num_idices) {
+        const indices = [];
+        while (indices.length < num_idices) {
+            const random_index = Math.floor(Math.random() * array_length);
+            if (!indices.includes(random_index)) {
+                indices.push(random_index);
+            }
+        }
+        return indices;
+    }
+    
+    get_random_samples(array, indices) {
+        return indices.map(index => array[index]);
+    }
+
     async train_model() {
         if (this.memory.length < this.batch_size) return;
 
-        const batch = tf.util.shuffle(this.memory).slice(0, this.batch_size);
-        const states = batch.map(sample => sample.state);
-        const next_states = batch.map(sample => sample.nextState);
+        const memory_array = this.memory.toArray();
+        
+        const randomIndices = this.get_random_indices(memory_array.length, this.batch_size);
+        const batch = this.get_random_samples(memory_array, randomIndices);
 
-        const current_q_values = this.model.predict(tf.tensor2d(states));
-        const next_q_values = this.targetUrl.model.predict(tf.tensor2d(next_states));
+        // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
+        const states = batch.map(sample => sample.state.flat());
+        const next_states = batch.map(sample => sample.next_state.flat());
+
+        const current_q_values = this.model.predict(tf.tensor2d(states, [states.length, this.state_size]));
+        const next_q_values = this.target_model.model.predict(tf.tensor2d(next_states, [next_states.length, this.state_size]));
 
         const targets = current_q_values.arraySync().map((currentQ, index) => {
             const {action, reward, done} = batch[index];
-            currentQ[action] = done ? reward : (reward + this.discountFactor * Math.max(...next_q_values[index]));
+            currentQ[action] = done ? reward : (reward + this.discount_factor * Math.max(...next_q_values.arraySync()[index]));
             return currentQ;
         });
 
-        await this.model.fit(tf.tensor2d(states), tf.tensor2d(targets), {
+        await this.model.fit(tf.tensor2d(states, [states.length, this.state_size]), tf.tensor2d(targets, [targets.length, this.action_size]), {
             batch_size: this.batch_size,
             epochs: 1,
             verbose: 0
         });
     }
 
-    load_model(name) {
-        this.model.loadLayersModel(name);
+    async save_model(name) {
+        await this.model.save(`indexeddb://${name}`);
     }
 
-    save_model(name) {
-        this.model.save(name);
+    async load_model(name) {
+        this.model = await tf.loadLayersModel(`indexeddb://${name}`);
     }
 
     /********************************* public *********************************/

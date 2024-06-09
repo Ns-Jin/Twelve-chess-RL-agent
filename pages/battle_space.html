@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Project - 강화학습 에이전트 대결</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <link rel="stylesheet" href="../styles/battle_space.css">
+</head>
+<body>
+    <header>
+        <img src="../images/back_icon.png" alt="Back" id="back_icon">
+        <h1>강화학습 에이전트 대결</h1>
+    </header>
+    <div id="main_container">
+        <div id="battle_area">
+        </div>
+    </div>
+    <script type="module" src="../scripts/environment.js"></script>
+    <script type="module" src="../scripts/DQNAgent.js"></script>
+    <script type="module" src="../scripts/battle.js"></script>
+    <script>
+        document.getElementById('back_icon').addEventListener('click', function() {
+            window.location.href = '../index.html';
+        });
+    </script>
+</body>
+</html>
