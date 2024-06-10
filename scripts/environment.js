@@ -48,6 +48,16 @@ export class Environment {
         // 왕이 상대 구역에 들어갔는지 확인
         this.red_touch_down = false;
         this.green_touch_down = false;
+
+        this.ctx.canvas.addEventListener('webglcontextlost', (event) => {
+            event.preventDefault();
+            console.error('WebGL context lost');
+        });
+
+        this.ctx.canvas.addEventListener('webglcontextrestored', () => {
+            console.log('WebGL context restored');
+            this._reinit(); // 컨텍스트 복구 후 재초기화 로직 추가
+        });
     }
 
     /********************************* private *********************************/
@@ -83,6 +93,11 @@ export class Environment {
         ];
 
         return actions;
+    }
+
+    _reinit() {
+        this.ctx = this.canvas.getContext('2d'); // 예시: 컨텍스트 다시 얻기
+        // 추가적인 재초기화 로직
     }
 
     /* 플레이어가 가진 말 탐색

@@ -148,8 +148,9 @@ export class DQNAgent {
         }
         else {
             return tf.tidy(() => {
-                const q_values = this.model.predict(tf.tensor2d(state.flat(), [1, this.state_size]));
+                const q_values = this.model.predict(tf.tensor2d(state.flat().map(cell => cell.num), [1, this.state_size]));
                 const q_values_array = q_values.arraySync()[0];
+                q_values.dispose();
                 
                 // 선택 가능한 행동들만 고려하도록 마스킹 적용
                 const masked_q_values = q_values_array.map((value, index) => {
@@ -195,23 +196,42 @@ export class DQNAgent {
         const batch = this.get_random_samples(memory_array, randomIndices);
 
         // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
-        const states = batch.map(sample => sample.state.flat());
-        const next_states = batch.map(sample => sample.next_state.flat());
+        const states = batch.map(sample => sample.state.flat().map(cell => cell.num));
+        const next_states = batch.map(sample => sample.next_state.flat().map(cell => cell.num));
 
-        const current_q_values = this.model.predict(tf.tensor2d(states, [states.length, this.state_size]));
-        const next_q_values = this.target_model.model.predict(tf.tensor2d(next_states, [next_states.length, this.state_size]));
-
-        const targets = current_q_values.arraySync().map((currentQ, index) => {
-            const {action, reward, done} = batch[index];
-            currentQ[action] = done ? reward : (reward + this.discount_factor * Math.max(...next_q_values.arraySync()[index]));
-            return currentQ;
+        const targets = tf.tidy(() => {
+            const current_q_values = this.model.predict(tf.tensor2d(states, [states.length, this.state_size]));
+            const next_q_values = this.target_model.predict(tf.tensor2d(next_states, [next_states.length, this.state_size]));
+    
+            const targets_array = current_q_values.arraySync().map((currentQ, index) => {
+                const {action, reward, done} = batch[index];
+                currentQ[action] = done ? reward : (reward + this.discount_factor * Math.max(...next_q_values.arraySync()[index]));
+                return currentQ;
+            });
+    
+            current_q_values.dispose();
+            next_q_values.dispose();
+    
+            return targets_array;
         });
+    
+        // Performing the asynchronous operation outside of tf.tidy
+        const states_tensor = tf.tensor2d(states, [states.length, this.state_size]);
+        const targets_tensor = tf.tensor2d(targets, [targets.length, this.action_size]);
 
-        await this.model.fit(tf.tensor2d(states, [states.length, this.state_size]), tf.tensor2d(targets, [targets.length, this.action_size]), {
-            batch_size: this.batch_size,
-            epochs: 1,
-            verbose: 0
-        });
+        await this.model.fit(
+            states_tensor, 
+            targets_tensor, 
+            {
+                batch_size: this.batch_size,
+                epochs: 1,
+                verbose: 0
+            }
+        );
+
+        // Dispose the tensors after use
+        states_tensor.dispose();
+        targets_tensor.dispose();
     }
 
     async save_model(name) {
