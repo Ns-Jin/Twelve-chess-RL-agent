@@ -40,7 +40,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
             let score = 0.0;
             
             ({ state, turn } = env.reset());
-            possible_actions = env.find_possible_actions(state, turn);
 
             while (!done) {
                 if(agent.render) {
@@ -84,6 +83,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 local_timesteps++;
 
                 if (done) {
+                    await agent.save_model("dqn_agent");
                     env.reset();
                     agent.update_target_model();
                     opponent.update_target_model();

@@ -265,10 +265,17 @@ export class Environment {
             해당 턴이 green의 턴인지 red의 턴인지 매개변수로 전달
         return: possible_actions
             유닛의 원래 위치, 움직일 위치, 받는 보상 */
-    find_possible_actions(state, turn) {
+    find_possible_actions(state, turn, unit=undefined) {
         const possible_actions = [];
-        // 본인이 가진 말들의 위치 확인, [i,j]
-        let units = this._find_units(turn);
+
+        let units;
+        if(unit == undefined) {
+            // 본인이 가진 말들의 위치 확인, [i,j]
+            units = this._find_units(turn);
+        }
+        else {
+            units = [unit];
+        }
         // console.log("My units:",units);
         for (let i=0;i<units.length;i++) {
             let unit = units[i];

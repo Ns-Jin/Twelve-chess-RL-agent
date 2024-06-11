@@ -97,24 +97,25 @@ export class DQNAgent {
         this.action_size = action_size;
 
         // DQN 하이퍼파라미터
-        this.discount_factor = discount_factor  // 0.99
-        this.learning_rate = learning_rate      // 0.001
-        this.epsilon = 1.0
-        this.epsilon_min = 0.005
-        this.epsilon_decay = (this.epsilon - this.epsilon_min) / 50000
-        this.batch_size = batch_size            // 64
-        this.train_start = 500                 // 학습 시작 시점
+        this.discount_factor = discount_factor;  // 0.99
+        this.learning_rate = learning_rate;      // 0.001
+        this.epsilon = 1.0;
+        this.epsilon_min = 0.005;
+        this.epsilon_decay = (this.epsilon - this.epsilon_min) / 500000;
+        this.batch_size = batch_size;            // 64
+        this.train_start = 500;                 // 학습 시작 시점
+        this.model_architecture = model_architecture;
 
         // 리플레이 메모리, 최대 크기 설정
-        this.queue_len_max = 3000
-        this.memory = new Deque(this.queue_len_max)
+        this.queue_len_max = 3000;
+        this.memory = new Deque(this.queue_len_max);
 
         // 학습 모델, 타겟 모델 똑같이 생성
-        this.model = this.build_model(model_architecture)
-        this.target_model = this.build_model(model_architecture)
+        this.model = this.build_model(model_architecture);
+        this.target_model = this.build_model(model_architecture);
 
         // 타겟 모델 업데이트 (학습 모델로 덮어씌움)
-        this.update_target_model()
+        this.update_target_model();
     }
 
     /********************************* private *********************************/
@@ -241,6 +242,39 @@ export class DQNAgent {
 
     async save_model(name) {
         await this.model.save(`indexeddb://${name}`);
+
+        // 파라미터를 JSON으로 저장
+        const params = {
+            turn: this.turn,
+            state_size: this.state_size,
+            action_size: this.action_size,
+            model_architecture: this.model_architecture,
+            discount_factor: this.discount_factor,
+            learning_rate: this.learning_rate,
+            batch_size: this.batch_size,
+            render: this.render
+        };
+
+        // IndexedDB에 파라미터 저장
+        const dbRequest = indexedDB.open('DQNAgentDB', 1);
+
+        dbRequest.onupgradeneeded = function(event) {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('agentParams')) {
+                db.createObjectStore('agentParams', { keyPath: 'name' });
+            }
+        };
+
+        dbRequest.onsuccess = function(event) {
+            const db = event.target.result;
+            const transaction = db.transaction(['agentParams'], 'readwrite');
+            const store = transaction.objectStore('agentParams');
+            store.put({ name, params });
+        };
+
+        dbRequest.onerror = function(event) {
+            console.error('Error opening IndexedDB:', event.target.errorCode);
+        };
     }
 
     async load_model(name) {

@@ -12,8 +12,8 @@
         <h1>강화학습 에이전트 대결</h1>
     </header>
     <div id="main_container">
-        <div id="battle_area">
-        </div>
+        <div id="battle_area"style="position: absolute; top: 25%; left: 25%; pointer-events: none;"></div>
+        <canvas id="overlay_area" width="900" height="600" style="position: absolute; top: 25%; left: 25%; pointer-events: none; padding: 20px; z-index: 999;"></canvas>
     </div>
     <script type="module" src="../scripts/environment.js"></script>
     <script type="module" src="../scripts/DQNAgent.js"></script>

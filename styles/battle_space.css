@@ -31,12 +31,12 @@ header img {
     padding: 20px;
     margin-top: 20px;
     margin-bottom: 20px;
-    height: calc(100vh - 100px); /* Adjust height to fill the viewport */
+    height: 100%;
     box-sizing: border-box;
 }
 
 #battle_area {
-    display: flex;
+    display: relative;
     justify-content: center; /* 가로 방향 중앙 정렬 */
     align-items: center;    /* 세로 방향 중앙 정렬 */
     width: 100%;
