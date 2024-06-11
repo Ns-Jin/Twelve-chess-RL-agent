@@ -281,6 +281,55 @@ export class DQNAgent {
         this.model = await tf.loadLayersModel(`indexeddb://${name}`);
     }
 
+    async save_model_to_file(name) {
+        // 모델을 파일로 저장
+        await this.model.save(`downloads://${name}`);
+    
+        // 파라미터를 JSON으로 저장
+        const params = {
+            turn: this.turn,
+            state_size: this.state_size,
+            action_size: this.action_size,
+            model_architecture: this.model_architecture,
+            discount_factor: this.discount_factor,
+            learning_rate: this.learning_rate,
+            batch_size: this.batch_size,
+            render: this.render
+        };
+    
+        // 파라미터를 Blob으로 변환
+        const paramsBlob = new Blob([JSON.stringify({ name, params })], { type: 'application/json' });
+    
+        // 파라미터 파일 다운로드
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(paramsBlob);
+        a.download = `${name}_params.json`;
+        a.click();
+    }
+    
+    async load_model_from_file(fileInput, paramsInput) {
+        const modelUrl = '../models/model.json'; // 모델 파일 URL
+        const paramsUrl = '../models/params.json';
+    
+        // 모델 파일 로드
+        this.model = await tf.loadLayersModel(modelUrl);
+
+        // 파라미터 파일 로드
+        const response = await fetch(paramsUrl);
+        const paramsText = await response.text();
+        const { name, params } = JSON.parse(paramsText);
+
+        // 파라미터를 객체에 적용
+        this.turn = params.turn;
+        this.state_size = params.state_size;
+        this.action_size = params.action_size;
+        this.model_architecture = params.model_architecture;
+        this.discount_factor = params.discount_factor;
+        this.learning_rate = params.learning_rate;
+        this.batch_size = params.batch_size;
+        this.render = params.render;
+    }
+    
     /********************************* public *********************************/
 
 }

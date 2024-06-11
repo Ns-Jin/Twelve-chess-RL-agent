@@ -78,7 +78,6 @@ function transformToIndex(x, y) {
 function transformToCoordinate(i, j) {
     let centerX, centerY;
 
-    // j에 따른 x 좌표의 중앙값 계산
     if (j === 0) {
         centerX = 300;
     } else if (j === 1) {
@@ -87,7 +86,6 @@ function transformToCoordinate(i, j) {
         centerX = 600;
     }
 
-    // i에 따른 y 좌표의 중앙값 계산
     if (i === 0) {
         centerY = 37.5;
     } else if (i === 1) {
@@ -107,7 +105,6 @@ function transformToCoordinate(i, j) {
     }
     return { centerX, centerY };
 }
-
 
 function arraysEqual(arr1, arr2) {
     if (arr1.length !== arr2.length) return false;
@@ -142,16 +139,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         ({ state, turn } = env.reset());
 
         const onClick = async (event) => {
-            console.log("test");
             if (loaded_params.turn === turn) return;
             const { offsetX, offsetY } = event;
             let i, j;
             ({ i, j } = transformToIndex(offsetX, offsetY));
+            console.log(offsetX, offsetY, i, j);
             if (i === undefined || j === undefined) {
                 selected = [];
                 return;
             }
             if (selected.length === 0) {
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                 selected = [i, j];
                 if (state[i][j].team === turn) {
                     possible_actions = env.find_possible_actions(state, turn, [i, j]);
@@ -159,66 +157,86 @@ document.addEventListener('DOMContentLoaded', async () => {
                         let possible_action = possible_actions[index];
                         let centerX, centerY;
                         ({ centerX, centerY } = transformToCoordinate(env.actions[possible_action][1][0], env.actions[possible_action][1][1]));
-                        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // 이전 원들 지우기
                         overlayCtx.beginPath();
                         overlayCtx.arc(centerX, centerY, 50, 0, Math.PI * 2);
                         overlayCtx.fillStyle = 'yellow';
                         overlayCtx.fill();
                     }
-                }
-                else {
+                } else {
                     selected = [];
                 }
-            }
-            else if (i >= 2 && i <= 5) {
+            } else if (i >= 2 && i <= 5) {
                 const temp_action = [selected, [i, j]];
                 for (let index = 0; index < possible_actions.length; index++) {
                     let possible_action = possible_actions[index];
                     if (arraysEqual(temp_action, env.actions[possible_action])) {
                         ({ next_state, turn, reward, done } = env.step(possible_action));
                         env.render("battle_area");
+                        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                         selected = [];
                         state = next_state;
-                        overlayCanvas.removeEventListener('click', onClick);
-                        await new Promise(resolve => setTimeout(resolve, 2000));
                         if (done) return;
-                        if (loaded_params.turn === turn) {
-                            agentTurn();
-                        }
                         break;
                     }
                 }
                 selected = [];
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            }
+        };
+
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        const agentTurn = async () => {
+            await delay(500);
+            if (done) return;
+            env.render("battle_area");
+            possible_actions = env.find_possible_actions(state, turn);
+            action = agent.get_action(state, possible_actions);
+            ({ next_state, turn, reward, done } = env.step(action));
+            state = next_state;
+            if (done) return;
+            if (loaded_params.turn != turn) {
+                overlayCanvas.addEventListener('click', onClick);
             }
         };
 
         overlayCanvas.addEventListener('click', onClick);
 
-        const agentTurn = async () => {
-            if (done) return;
-            possible_actions = env.find_possible_actions(state, turn);
-            action = agent.get_action(state, possible_actions);
-            ({ next_state, turn, reward, done } = env.step(action));
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            env.render("battle_area");
-            state = next_state;
-            if (done) return;
-            if (loaded_params.turn !== turn) {
-                overlayCanvas.addEventListener('click', onClick);
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 10));
-                agentTurn();
-            }
-        };
-
         while (!done) {
             if (loaded_params.turn === turn) {
                 await agentTurn();
             } else {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await delay(10);
             }
         }
+        if(done) {
+            console.log("test");
+            document.getElementById('modal').style.display = 'block';
+            const winner = turn === 'green' ? 'red' : 'green';
+            document.getElementById('winner').innerText = 'Winner: ' + winner.toUpperCase();
+            document.getElementById('winner').style.color = winner;
+            if(winner == 'red') {
+                document.querySelectorAll('button').forEach(button => {
+                    button.style.backgroundColor = 'red'; // 원하는 색상으로 변경
+                });
+            }
+        }
+
     } catch (error) {
         console.error(error);
     }
 });
+
+document.getElementById('restart_button').addEventListener('click', function() {
+    location.reload();
+});
+
+document.getElementById('back_button').addEventListener('click', function() {
+    window.location.href = '../index.html';
+});
+
+window.onclick = function(event) {
+    if (event.target == document.getElementById('modal')) {
+        document.getElementById('modal').style.display = 'none';
+    }
+};
