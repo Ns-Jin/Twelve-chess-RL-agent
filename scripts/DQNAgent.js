@@ -120,7 +120,7 @@ export class DQNAgent {
     /********************************* private *********************************/
     build_model(model_architecture) {
         const model = tf.sequential();
-        model.add(tf.layers.dense({ units: parseInt(model_architecture[0]), inputShape: [this.state_size], activation: 'relu', kernelInitializer: 'heUniform' }));
+        model.add(tf.layers.dense({ units: parseInt(model_architecture[0]), inputShape: [this.state_size / 2], activation: 'relu', kernelInitializer: 'heUniform' }));
         for(let i=1;i<model_architecture.length;i++) {
             model.add(tf.layers.dense({ units: model_architecture[i], activation: 'relu', kernelIniitalizer: 'heUniform' }));
         }
@@ -132,6 +132,10 @@ export class DQNAgent {
 
     update_target_model() {
         this.target_model.setWeights(this.model.getWeights());
+    }
+
+    extract_board_state(state) {
+        return state.slice(2, 6).flat().map(cell => cell.num);
     }
 
     /* 현재 state에서 action 선택
@@ -148,7 +152,8 @@ export class DQNAgent {
         }
         else {
             return tf.tidy(() => {
-                const q_values = this.model.predict(tf.tensor2d(state.flat().map(cell => cell.num), [1, this.state_size]));
+                const board_state = this.extract_board_state(state);
+                const q_values = this.model.predict(tf.tensor2d(board_state, [1, this.state_size / 2]));
                 const q_values_array = q_values.arraySync()[0];
                 q_values.dispose();
                 
@@ -196,12 +201,12 @@ export class DQNAgent {
         const batch = this.get_random_samples(memory_array, randomIndices);
 
         // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
-        const states = batch.map(sample => sample.state.flat().map(cell => cell.num));
-        const next_states = batch.map(sample => sample.next_state.flat().map(cell => cell.num));
+        const states = batch.map(sample => this.extract_board_state(sample.state));
+        const next_states = batch.map(sample => this.extract_board_state(sample.next_state));
 
         const targets = tf.tidy(() => {
-            const current_q_values = this.model.predict(tf.tensor2d(states, [states.length, this.state_size]));
-            const next_q_values = this.target_model.predict(tf.tensor2d(next_states, [next_states.length, this.state_size]));
+            const current_q_values = this.model.predict(tf.tensor2d(states, [states.length, this.state_size / 2]));
+            const next_q_values = this.target_model.predict(tf.tensor2d(next_states, [next_states.length, this.state_size / 2]));
     
             const targets_array = current_q_values.arraySync().map((currentQ, index) => {
                 const {action, reward, done} = batch[index];
@@ -216,7 +221,7 @@ export class DQNAgent {
         });
     
         // Performing the asynchronous operation outside of tf.tidy
-        const states_tensor = tf.tensor2d(states, [states.length, this.state_size]);
+        const states_tensor = tf.tensor2d(states, [states.length, states[0].length]);
         const targets_tensor = tf.tensor2d(targets, [targets.length, this.action_size]);
 
         await this.model.fit(
