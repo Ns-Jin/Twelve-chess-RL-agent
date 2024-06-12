@@ -1,7 +1,7 @@
 /*
     십이장기 환경
 */
-const FINALLY_REWARD = 10;
+const FINALLY_REWARD = 100;
 
 export const 공 = {num: 0, reward: 0, team: 'none'};
 export const red_장 = {num: 1, reward: 0.5, team: 'red', actions: [[1,0],[0,1],[-1,0],[0,-1]]};

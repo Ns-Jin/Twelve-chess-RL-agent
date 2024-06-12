@@ -107,7 +107,7 @@ export class DQNAgent {
         this.model_architecture = model_architecture;
 
         // 리플레이 메모리, 최대 크기 설정
-        this.queue_len_max = 3000;
+        this.queue_len_max = 2000;
         this.memory = new Deque(this.queue_len_max);
 
         // 학습 모델, 타겟 모델 똑같이 생성

@@ -58,19 +58,25 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 if(!done) {
                     // 상대 행동도 한턴에 같이 실행
                     possible_actions = env.find_possible_actions(next_state, turn);
-                    //이것은 상대도 학습함
-                    enemy_action = opponent.get_action(next_state, possible_actions);
-                    ({ next_state: enemy_next_state, turn, reward: enemy_reward, done } = env.step(enemy_action));
-                    reward -= enemy_reward;
-                    // 이것은 랜덤행동
-                    // const random_index = Math.floor(Math.random() * possible_actions.length);
-                    // enemy_action = possible_actions[random_index];
-                    // ({next_state, turn, reward: enemy_reward, done} = env.step(enemy_action));
-                    // reward -= enemy_reward;
+
+                    if(e < TOTAL_EPISODES / 4) {
+                        // 랜덤행동
+                        const random_index = Math.floor(Math.random() * possible_actions.length);
+                        enemy_action = possible_actions[random_index];
+                        ({next_state, turn, reward: enemy_reward, done} = env.step(enemy_action));
+                        reward -= enemy_reward;
+                    }
+                    else {
+                        // dqn 기반 행동 및 학습
+                        enemy_action = opponent.get_action(next_state, possible_actions);
+                        ({ next_state: enemy_next_state, turn, reward: enemy_reward, done } = env.step(enemy_action));
+                        reward -= enemy_reward;
+                        opponent.append_sample(next_state, action, enemy_reward, enemy_next_state, done);
+                    }
                 }
 
                 agent.append_sample(state, action, reward, next_state, done);
-                opponent.append_sample(next_state, action, enemy_reward, enemy_next_state, done);
+                
                 if (agent.memory.length >= agent.train_start) {
                     await agent.train_model();
                 }
