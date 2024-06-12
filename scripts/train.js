@@ -76,7 +76,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 }
 
                 agent.append_sample(state, action, reward, next_state, done);
-                
+
                 if (agent.memory.length >= agent.train_start) {
                     await agent.train_model();
                 }
@@ -122,7 +122,8 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         }
         await agent.save_model("dqn_agent");
         await opponent.save_model("opponent");
-
+        await agent.save_model_to_file("dqn_agent");
+        await opponent.save_model_to_file("opponent");
     } catch (error) {
         console.log('에러 발생:', error.message);
     } finally {
