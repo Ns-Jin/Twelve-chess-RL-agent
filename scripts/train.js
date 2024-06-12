@@ -59,7 +59,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     // 상대 행동도 한턴에 같이 실행
                     possible_actions = env.find_possible_actions(next_state, turn);
 
-                    if(e < TOTAL_EPISODES / 4) {
+                    if(e < TOTAL_EPISODES * 0.7) {
                         // 랜덤행동
                         const random_index = Math.floor(Math.random() * possible_actions.length);
                         enemy_action = possible_actions[random_index];
@@ -89,7 +89,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 local_timesteps++;
 
                 if (done) {
-                    await agent.save_model("dqn_agent");
+                    // await agent.save_model("dqn_agent");
                     env.reset();
                     agent.update_target_model();
                     opponent.update_target_model();

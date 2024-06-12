@@ -117,6 +117,11 @@ function arraysEqual(arr1, arr2) {
     return true;
 }
 
+function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const env = new Environment(150);
     env.render("battle_area");
@@ -131,7 +136,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Loaded parameters:', params);
         loaded_params = structuredClone(params);
 
-        const agent = new DQNAgent('red', env.board_col * env.board_row, env.action_size, loaded_params.model_architecture, loaded_params.discountFactor, loaded_params.learningRate, loaded_params.batchSize, loaded_params.render);
+        const model_type = getQueryParam('model');
+        let agent;
+        if (model_type == 'custom_model') {
+            agent = new DQNAgent('red', env.board_col * env.board_row, env.action_size, loaded_params.model_architecture, loaded_params.discountFactor, loaded_params.learningRate, loaded_params.batchSize, loaded_params.render);
+            agent.load_model(name);
+        }
+        else {
+            agent = new DQNAgent('red', env.board_col * env.board_row, env.action_size);
+            agent.load_model_from_file('dqn_agent');
+        }
 
         let state, next_state, turn, reward, done, action, possible_actions;
         done = false;
@@ -210,7 +224,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         if(done) {
-            console.log("test");
             document.getElementById('modal').style.display = 'block';
             const winner = turn === 'green' ? 'red' : 'green';
             document.getElementById('winner').innerText = 'Winner: ' + winner.toUpperCase();

@@ -88,7 +88,7 @@ export class Deque {
 
 
 export class DQNAgent {
-    constructor(turn, state_size, action_size, model_architecture, discount_factor, learning_rate, batch_size, render) {
+    constructor(turn, state_size, action_size, model_architecture=[64], discount_factor=0.99, learning_rate=0.01, batch_size=64, render=true) {
         this.turn = turn;
         
         this.render = render;
@@ -98,10 +98,10 @@ export class DQNAgent {
 
         // DQN 하이퍼파라미터
         this.discount_factor = discount_factor;  // 0.99
-        this.learning_rate = learning_rate;      // 0.001
+        this.learning_rate = learning_rate;      // 0.01
         this.epsilon = 1.0;
         this.epsilon_min = 0.005;
-        this.epsilon_decay = (this.epsilon - this.epsilon_min) / 500000;
+        this.epsilon_decay = (this.epsilon - this.epsilon_min) / 100000;
         this.batch_size = batch_size;            // 64
         this.train_start = 500;                 // 학습 시작 시점
         this.model_architecture = model_architecture;
@@ -121,10 +121,13 @@ export class DQNAgent {
     /********************************* private *********************************/
     build_model(model_architecture) {
         const model = tf.sequential();
-        model.add(tf.layers.dense({ units: parseInt(model_architecture[0]), inputShape: [this.state_size / 2], activation: 'relu', kernelInitializer: 'heUniform' }));
+        model.add(tf.layers.conv2d({ inputShape: [4,3,1], filters: parseInt(this.model_architecture[0]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
+        model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1] }));
         for(let i=1;i<model_architecture.length;i++) {
-            model.add(tf.layers.dense({ units: model_architecture[i], activation: 'relu', kernelIniitalizer: 'heUniform' }));
+            model.add(tf.layers.conv2d({ filters: parseInt(this.model_architecture[i]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
+            model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1] }));
         }
+        model.add(tf.layers.flatten());
         model.add(tf.layers.dense({ units: this.action_size, activation: 'linear', kernelInitializer: 'heUniform' }));
         model.compile({ loss: 'meanSquaredError', optimizer: tf.train.adam(this.learning_rate) });
         model.summary();
@@ -136,8 +139,11 @@ export class DQNAgent {
     }
 
     extract_board_state(state) {
-        return state.slice(2, 6).flat().map(cell => cell.num);
-    }
+        const boardState = state.slice(2, 6).map(row => row.map(cell => cell.num));
+        const reshapedState = boardState.map(row => row.map(cell => [cell]));
+        const tensor = tf.tensor3d(reshapedState);
+        return tf.expandDims(tensor, 0);  // 차원을 추가하여 [1, 4, 3, 1] 형태로 만듦
+    }  
 
     /* 현재 state에서 action 선택
         parameter: state
@@ -153,8 +159,10 @@ export class DQNAgent {
         }
         else {
             return tf.tidy(() => {
+                console.log("action");
                 const board_state = this.extract_board_state(state);
-                const q_values = this.model.predict(tf.tensor2d(board_state, [1, this.state_size / 2]));
+                console.log(board_state, board_state.shape);
+                const q_values = this.model.predict(board_state);
                 const q_values_array = q_values.arraySync()[0];
                 q_values.dispose();
                 
@@ -204,10 +212,15 @@ export class DQNAgent {
         // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
         const states = batch.map(sample => this.extract_board_state(sample.state));
         const next_states = batch.map(sample => this.extract_board_state(sample.next_state));
+        // tf.stack을 사용하여 텐서 배열을 하나의 배치 텐서로 변환
+        const statesTensor = tf.stack(states);
+        const nextStatesTensor = tf.stack(next_states);
+        const reshapedStatesTensor = tf.squeeze(statesTensor, [1]);
+        const reshapedNextStatesTensor = tf.squeeze(nextStatesTensor, [1]);
 
         const targets = tf.tidy(() => {
-            const current_q_values = this.model.predict(tf.tensor2d(states, [states.length, this.state_size / 2]));
-            const next_q_values = this.target_model.predict(tf.tensor2d(next_states, [next_states.length, this.state_size / 2]));
+            const current_q_values = this.model.predict(reshapedStatesTensor);
+            const next_q_values = this.target_model.predict(reshapedNextStatesTensor);
     
             const targets_array = current_q_values.arraySync().map((currentQ, index) => {
                 const {action, reward, done} = batch[index];
@@ -307,17 +320,20 @@ export class DQNAgent {
         a.click();
     }
     
-    async load_model_from_file(fileInput, paramsInput) {
-        const modelUrl = '../models/model.json'; // 모델 파일 URL
-        const paramsUrl = '../models/params.json';
+    async load_model_from_file(fileName) {
+        const modelUrl = '../saved_models/' + fileName + '.json';
+        const modelWeightsUrl = '../saved_models/' + fileName + '.weight';
+        const paramsUrl = '../saved_models/' + fileName + '_params.json';
     
         // 모델 파일 로드
-        this.model = await tf.loadLayersModel(modelUrl);
+        this.model = await tf.loadLayersModel(modelUrl, {weightsUrl: modelWeightsUrl});
 
         // 파라미터 파일 로드
         const response = await fetch(paramsUrl);
         const paramsText = await response.text();
         const { name, params } = JSON.parse(paramsText);
+
+        console.log(name, params);
 
         // 파라미터를 객체에 적용
         this.turn = params.turn;
