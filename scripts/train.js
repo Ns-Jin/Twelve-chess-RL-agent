@@ -107,24 +107,24 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     local_timesteps = 0;
 
                     // 각 에피소드마다 타임스텝을 plot
-                    scores.push(score);
-                    episodes.push(e);
+                    // scores.push(score);
+                    // episodes.push(e);
                     
-                    const trace = {
-                        x: episodes,
-                        y: scores,
-                        type: 'scatter',
-                        mode: 'lines+markers',
-                        marker: { color: 'blue' }
-                    };
+                    // const trace = {
+                    //     x: episodes,
+                    //     y: scores,
+                    //     type: 'scatter',
+                    //     mode: 'lines+markers',
+                    //     marker: { color: 'blue' }
+                    // };
         
-                    const layout = {
-                        title: 'Score per episode',
-                        xaxis: { title: 'Episode' },
-                        yaxis: { title: 'Score' }
-                    };
+                    // const layout = {
+                    //     title: 'Score per episode',
+                    //     xaxis: { title: 'Episode' },
+                    //     yaxis: { title: 'Score' }
+                    // };
         
-                    Plotly.newPlot('plot', [trace], layout);
+                    // Plotly.newPlot('plot', [trace], layout);
                     console.log(`episode: ${e}, score: ${score}, memory length: ${agent.memory.length}, epsilon: ${agent.epsilon}, timestep: ${global_timesteps} (+${local_timesteps})`);
                 }
             }

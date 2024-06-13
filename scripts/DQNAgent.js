@@ -121,11 +121,11 @@ export class DQNAgent {
     /********************************* private *********************************/
     build_model(model_architecture) {
         const model = tf.sequential();
-        model.add(tf.layers.conv2d({ inputShape: [4,3,1], filters: parseInt(this.model_architecture[0]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
-        model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1] }));
+        model.add(tf.layers.conv2d({ inputShape: [8,3,1], filters: parseInt(this.model_architecture[0]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
+        model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1], padding: 'same' }));
         for(let i=1;i<model_architecture.length;i++) {
             model.add(tf.layers.conv2d({ filters: parseInt(this.model_architecture[i]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
-            model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1] }));
+            model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1], padding: 'same' }));
         }
         model.add(tf.layers.flatten());
         model.add(tf.layers.dense({ units: this.action_size, activation: 'linear', kernelInitializer: 'heUniform' }));
@@ -139,11 +139,14 @@ export class DQNAgent {
     }
 
     extract_board_state(state) {
-        const boardState = state.slice(2, 6).map(row => row.map(cell => cell.num));
-        const reshapedState = boardState.map(row => row.map(cell => [cell]));
-        const tensor = tf.tensor3d(reshapedState);
-        return tf.expandDims(tensor, 0);  // 차원을 추가하여 [1, 4, 3, 1] 형태로 만듦
-    }  
+        return tf.tidy(() => {
+            const boardState = state.map(row => row.map(cell => cell.num));
+            const reshapedState = boardState.map(row => row.map(cell => [cell]));
+            const tensor = tf.tensor3d(reshapedState);
+            return tensor;
+        });
+    }
+    
 
     /* 현재 state에서 action 선택
         parameter: state
@@ -159,11 +162,10 @@ export class DQNAgent {
         }
         else {
             return tf.tidy(() => {
-                console.log("action");
                 const board_state = this.extract_board_state(state);
-                console.log(board_state, board_state.shape);
-                const q_values = this.model.predict(board_state);
+                const q_values = this.model.predict(tf.expandDims(board_state, 0));
                 const q_values_array = q_values.arraySync()[0];
+                board_state.dispose();
                 q_values.dispose();
                 
                 // 선택 가능한 행동들만 고려하도록 마스킹 적용
@@ -210,17 +212,13 @@ export class DQNAgent {
         const batch = this.get_random_samples(memory_array, randomIndices);
 
         // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
-        const states = batch.map(sample => this.extract_board_state(sample.state));
-        const next_states = batch.map(sample => this.extract_board_state(sample.next_state));
-        // tf.stack을 사용하여 텐서 배열을 하나의 배치 텐서로 변환
-        const statesTensor = tf.stack(states);
-        const nextStatesTensor = tf.stack(next_states);
-        const reshapedStatesTensor = tf.squeeze(statesTensor, [1]);
-        const reshapedNextStatesTensor = tf.squeeze(nextStatesTensor, [1]);
+        const states = tf.stack(batch.map(sample => this.extract_board_state(sample.state)), 0);
+        const next_states = tf.stack(batch.map(sample => this.extract_board_state(sample.next_state)), 0);
 
         const targets = tf.tidy(() => {
-            const current_q_values = this.model.predict(reshapedStatesTensor);
-            const next_q_values = this.target_model.predict(reshapedNextStatesTensor);
+            const current_q_values = this.model.predict(states);
+            const next_q_values = this.target_model.predict(next_states);
+
     
             const targets_array = current_q_values.arraySync().map((currentQ, index) => {
                 const {action, reward, done} = batch[index];
@@ -235,8 +233,8 @@ export class DQNAgent {
         });
     
         // Performing the asynchronous operation outside of tf.tidy
-        const states_tensor = tf.tensor2d(states, [states.length, states[0].length]);
-        const targets_tensor = tf.tensor2d(targets, [targets.length, this.action_size]);
+        const states_tensor = states;
+        const targets_tensor = tf.tensor2d(targets, [this.batch_size, this.action_size]);
 
         await this.model.fit(
             states_tensor, 
@@ -251,6 +249,8 @@ export class DQNAgent {
         // Dispose the tensors after use
         states_tensor.dispose();
         targets_tensor.dispose();
+        states.dispose();
+        next_states.dispose();
     }
 
     async save_model(name) {
