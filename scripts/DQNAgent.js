@@ -103,11 +103,11 @@ export class DQNAgent {
         this.epsilon_min = 0.005;
         this.epsilon_decay = (this.epsilon - this.epsilon_min) / 100000;
         this.batch_size = batch_size;            // 64
-        this.train_start = 500;                 // 학습 시작 시점
+        this.train_start = 1000;                 // 학습 시작 시점
         this.model_architecture = model_architecture;
 
         // 리플레이 메모리, 최대 크기 설정
-        this.queue_len_max = 2000;
+        this.queue_len_max = 5000;
         this.memory = new Deque(this.queue_len_max);
 
         // 학습 모델, 타겟 모델 똑같이 생성

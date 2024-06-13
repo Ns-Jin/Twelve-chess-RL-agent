@@ -21,7 +21,7 @@
                 </div>
                 <div class="form-group">
                     <label for="modelArchitecture">Model Architecture (e.g., 32,64-32, 128-64-32):</label>
-                    <input type="text" id="modelArchitecture" name="modelArchitecture" placeholder="128-64-32" value="128-64-32" required pattern="^\d+(-\d+)*$">
+                    <input type="text" id="modelArchitecture" name="modelArchitecture" placeholder="64-32-16" value="64-32-16" required pattern="^\d+(-\d+)*$">
                 </div>
                 <div class="form-group">
                     <label for="discountFactor">Discount Factor (0.95 to 0.999):</label>
@@ -36,7 +36,7 @@
                     <input type="number" id="batchSize" name="batchSize" min="16" max="128" placeholder="64" value="64" required>
                 </div>
                 <div class="form-group">
-                    <label for="render">Render:</label>
+                    <label for="render">Render (if episodes > 5000: Render fixed False):</label>
                     <select id="render" name="render">
                         <option value="true">True</option>
                         <option value="false">False</option>
@@ -62,10 +62,5 @@
     <script type="module" src="../scripts/environment.js"></script>
     <script type="module" src="../scripts/DQNAgent.js"></script>
     <script type="module" src="../scripts/train.js"></script>
-    <script>
-        document.getElementById('back_icon').addEventListener('click', function() {
-            window.location.href = '../index.html';
-        });
-    </script>
 </body>
 </html>
