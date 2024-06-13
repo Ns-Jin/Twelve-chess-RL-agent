@@ -1,5 +1,4 @@
-
-
+/* Deque 구현을 위한 Node 구현 */
 export class ListNode {
     constructor(value) {
         this.value = value;
@@ -8,6 +7,7 @@ export class ListNode {
     }
 }
 
+/* memory를 위해 Deque 자료구조를 구현 */
 export class Deque {
     constructor(max_len) {
         this.max_len = max_len;
@@ -85,12 +85,9 @@ export class Deque {
     }
 }
 
-
-
 export class DQNAgent {
     constructor(turn, state_size, action_size, episodes = 50000, model_architecture=[64], discount_factor=0.99, learning_rate=0.01, batch_size=64, render=true) {
         this.turn = turn;
-        
         this.render = render;
 
         this.state_size = state_size;
@@ -101,9 +98,9 @@ export class DQNAgent {
         this.learning_rate = learning_rate;      // 0.01
         this.epsilon = 1.0;
         this.epsilon_min = 0.005;
-        this.epsilon_decay = (this.epsilon - this.epsilon_min) / (episodes * 5);
+        this.epsilon_decay = (this.epsilon - this.epsilon_min) / (episodes * 7); // 경험론적 수치
         this.batch_size = batch_size;            // 64
-        this.train_start = 1000;                 // 학습 시작 시점
+        this.train_start = 2000;                 // 학습 시작 시점
         this.model_architecture = model_architecture;
 
         // 리플레이 메모리, 최대 크기 설정
@@ -111,15 +108,20 @@ export class DQNAgent {
         this.memory = new Deque(this.queue_len_max);
 
         // 학습 모델, 타겟 모델 똑같이 생성
-        this.model = this.build_model(model_architecture);
-        this.target_model = this.build_model(model_architecture);
+        this.model = this._build_model(model_architecture);
+        this.target_model = this._build_model(model_architecture);
 
         // 타겟 모델 업데이트 (학습 모델로 덮어씌움)
         this.update_target_model();
     }
 
     /********************************* private *********************************/
-    build_model(model_architecture) {
+    /* 모델을 생성
+        parameter: model_architecture (array)
+            모델 구조(필터 수)를 입력으로 받아 모델 구조 설정
+        return model
+            생성된 모델 리턴 */
+    _build_model(model_architecture) {
         const model = tf.sequential();
         model.add(tf.layers.conv2d({ inputShape: [8,3,1], filters: parseInt(this.model_architecture[0]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
         model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1], padding: 'same' }));
@@ -134,12 +136,13 @@ export class DQNAgent {
         return model;
     }
 
-    update_target_model() {
-        this.target_model.setWeights(this.model.getWeights());
-    }
-
-    sortSpecificRows(state, rowIndexes) {
-        // 주어진 행 인덱스에 대해 각 행을 정렬합니다.
+    /* state 정리
+        parameter: state
+            현재 상태를 입력으로 받고 포켓에 있는 말을 sort하여 state 경우의 수를 줄임
+            (ex> 보드에 있는 말들의 위치가 동일하고 포켓에 있는 말의 종류가 같은 상황에서 포켓에 말의 위치에 따라 서로 다른 state로 정의됨. 이것을 num으로 정렬하여 정규화시킴)
+        return state
+            업데이트된 state를 반환 */
+    _sort_state(state) {
         let temp = [];
         temp.push(...state[0]);
         temp.push(...state[1]);
@@ -161,11 +164,51 @@ export class DQNAgent {
         return state;
     }
 
+    /* memory에서 추출할 index 번호를 랜덤으로 얻는 함수
+        parameter: array_length, num_idices
+            array_length: 추출할 배열의 크기 (즉, memory의 크기)
+            num_idices: index를 추출할 갯수
+        return: indices
+            랜덤으로 추출한 index들을 반환 */
+    _get_random_indices(array_length, num_idices) {
+        const indices = [];
+        while (indices.length < num_idices) {
+            const random_index = Math.floor(Math.random() * array_length);
+            if (!indices.includes(random_index)) {
+                indices.push(random_index);
+            }
+        }
+        return indices;
+    }
+    
+    /* memory에서 추출할 index 번호를 랜덤으로 얻는 함수
+        parameter: array, indices
+            array: 추출할 배열 (memory)
+            indices: 추출할 index 번호들
+        return: Array (samples)
+            추출한 samples 반환 */
+    _get_random_samples(array, indices) {
+        return indices.map(index => array[index]);
+    }
+    
+    /********************************* public *********************************/
+
+    /* 타겟 모델을 업데이트
+        타겟 모델을 모델로 덮어씌우며 업데이트 */
+    update_target_model() {
+        this.target_model.setWeights(this.model.getWeights());
+    }
+
+    /* state를 모델의 입력으로 넣기위해 tensor화
+        parameter: state
+            state를 num의 값들로만 표현하고 tensor화 하여반환
+        return tensor (tf.tensor3d)
+            tensor3d의 형태 (8,3,1) 8개의 열, 3개의 행, 1개의 채널로 state를 표현 */
     extract_board_state(state) {
         return tf.tidy(() => {
-            const tempBoardState = state.map(row => row.map(cell => cell.num));
-            const boardState = this.sortSpecificRows(tempBoardState, [0,1]);
-            const reshapedState = boardState.map(row => row.map(cell => [cell]));
+            const boardState = state.map(row => row.map(cell => cell.num));
+            const sortedBoardState = this._sort_state(boardState, [0,1]);
+            const reshapedState = sortedBoardState.map(row => row.map(cell => [cell]));
             const tensor = tf.tensor3d(reshapedState);
             return tensor;
         });
@@ -204,7 +247,13 @@ export class DQNAgent {
         }
     }
 
-
+    /* memory에 sample을 추가
+        parameter: state, action, reward, next_state, done
+            state: action을 수행하기전 상태
+            action: 현재 state에서 수행할 action (actions의 index값)
+            reward: action을 수행 후 받는 reward 값
+            next_state: state에서 action을 수행한 후 다음의 next_state
+            done: action후 에피소드가 종료됐는지 확인 */
     append_sample(state, action, reward, next_state, done) {
         this.memory.push({ state, action, reward, next_state, done });
         if (this.epsilon > this.epsilon_min) {
@@ -212,28 +261,16 @@ export class DQNAgent {
         }
     }
 
-    get_random_indices(array_length, num_idices) {
-        const indices = [];
-        while (indices.length < num_idices) {
-            const random_index = Math.floor(Math.random() * array_length);
-            if (!indices.includes(random_index)) {
-                indices.push(random_index);
-            }
-        }
-        return indices;
-    }
-    
-    get_random_samples(array, indices) {
-        return indices.map(index => array[index]);
-    }
-
+    /* model을 학습시키는 함수
+        momory에서 배치 사이즈 만큼 샘플들을 랜덤 추출하여 batch 러닝
+        model과 target model의 차이를 통해 학습을 진행 */
     async train_model() {
         if (this.memory.length < this.batch_size) return;
 
         const memory_array = this.memory.toArray();
         
-        const randomIndices = this.get_random_indices(memory_array.length, this.batch_size);
-        const batch = this.get_random_samples(memory_array, randomIndices);
+        const randomIndices = this._get_random_indices(memory_array.length, this.batch_size);
+        const batch = this._get_random_samples(memory_array, randomIndices);
 
         // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
         const states = tf.stack(batch.map(sample => this.extract_board_state(sample.state)), 0);
@@ -277,6 +314,9 @@ export class DQNAgent {
         next_states.dispose();
     }
 
+    /* model을 indexedDB에 저장
+        parameter: name
+            name: 저장할 모델 이름 */
     async save_model(name) {
         await this.model.save(`indexeddb://${name}`);
 
@@ -314,10 +354,9 @@ export class DQNAgent {
         };
     }
 
-    async load_model(name) {
-        this.model = await tf.loadLayersModel(`indexeddb://${name}`);
-    }
-
+    /* model을 파일 형태로 저장
+        parameter: name
+            name: 저장할 모델 이름 */
     async save_model_to_file(name) {
         // 모델을 파일로 저장
         await this.model.save(`downloads://${name}`);
@@ -343,7 +382,17 @@ export class DQNAgent {
         a.download = `${name}_params.json`;
         a.click();
     }
+
+    /* model을 indexedDB에서 불러오기
+        parameter: name
+            name: 불러올 모델 이름 */
+    async load_model(name) {
+        this.model = await tf.loadLayersModel(`indexeddb://${name}`);
+    }
     
+    /* model을 로컬 파일로 불러오기
+        parameter: name
+            name: 불러올 모델 이름 */
     async load_model_from_file(fileName) {
         const modelUrl = '../saved_models/' + fileName + '.json';
         const modelWeightsUrl = '../saved_models/' + fileName + '.weight';
@@ -369,7 +418,4 @@ export class DQNAgent {
         this.batch_size = params.batch_size;
         this.render = params.render;
     }
-    
-    /********************************* public *********************************/
-
 }

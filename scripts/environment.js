@@ -14,8 +14,8 @@ export const green_왕 = {num: 7, reward: FINALLY_REWARD, team: 'green', actions
 export const green_상 = {num: 8, reward: 0.5, team: 'green', actions: [[1,1],[-1,1],[1,-1],[-1,-1]]};
 export const green_자 = {num: 9, reward: 0.25, team: 'green', actions: [[1,0]]};
 export const green_후 = {num: 10, reward: 0.25, team: 'green', actions: [[1,0],[0,1],[-1,0],[0,-1],[1,1],[1,-1]]};
-
 export const units = [공,red_장,red_왕,red_상,red_자,red_후,green_장,green_왕,green_상,green_자,green_후];
+
 export class Environment {
     constructor(cell_size) {
         // 현재 보드 상태, 처음에는 초기화된 상태로 존재
@@ -62,7 +62,9 @@ export class Environment {
 
     /********************************* private *********************************/
     
-    /* 가능한 모든 action을 미리 정의, DQN  */
+    /* 가능한 모든 action 정의, 초기화
+        return: actions
+            게임 내에서 수행가능한 모든 action (turn에 구애받지 않음) */ 
     _init_actions() {
         // 액션을 동적으로 선언하려 했으나 고려해야할 부분이 많아 명시적으로 선언함
         const actions = [
@@ -95,6 +97,7 @@ export class Environment {
         return actions;
     }
 
+    /* 캔버스 컨텍스트가 사라지는 에러 해결을 위해 컨텍스트 재정의 */ 
     _reinit() {
         this.ctx = this.canvas.getContext('2d'); // 예시: 컨텍스트 다시 얻기
         // 추가적인 재초기화 로직
@@ -149,7 +152,7 @@ export class Environment {
             해당 턴이 green의 턴인지 red의 턴인지 매개변수로 전달
         parameter: unit
             특정 unit의 보드내 좌표 [i,j]
-        return: bool
+        return: in_pocket (bool)
             포켓에 있다면 true, 없다면 false 반환 */
     _is_unit_in_pocket(turn, unit) {
         let in_pocket = false; 
@@ -211,7 +214,9 @@ export class Environment {
         return temp_state;
     }
 
-    // 왕과 자가 상대 구역에 있는지 확인하고 승리 조건을 체크하는 함수
+    /* 왕과 자가 상대 진영으로 들어갈 시 이벤트 처리
+        왕이 들어갈 시 한턴 버티면 승리하기위해 트리거 true설정
+        자가 들어갈 시 후로 바뀌도록 설정 */
     _check_king_and_ja_in_opponent_area() {
         for (let row = 0; row < this.state.length; row++) {
             for (let col = 0; col < this.state[row].length; col++) {
@@ -257,6 +262,11 @@ export class Environment {
         return reward;
     }
 
+    /* 배열이 같은지 확인
+        parameter: a, b
+            비교할 배열 2개
+        return: bool
+            같으면 true, 아니면 false  */
     _arrays_equal(a, b) {
         if (a.length !== b.length) return false;
         for (let i = 0; i < a.length; i++) {
@@ -265,6 +275,11 @@ export class Environment {
         return true;
     }
 
+    /* 액션을 index로 변환
+        parameter: target_action
+            [[x,y],[x',y']]: x,y좌표의 말을 x',y'로 이동
+        return: integer
+            this.actions에서 target_action의 인덱스를 반환 */
     _find_action_index(target_action) {
         return this.actions.findIndex(action => {
             return action.length === target_action.length &&
@@ -272,8 +287,55 @@ export class Environment {
         });
     }
 
+    /* 보드에 말을 생성
+        parameter: row, col, unit
+            row, col: 보드의 index
+            unit: 그릴 말 */
+    _drawCell(row, col, unit) {
+        let x, y, size;
+    
+        if (row < 2) {
+            x = col * this.pocket_cell_size;
+            y = row * this.pocket_cell_size;
+            size = this.pocket_cell_size;
+        } else if (row > 5) {
+            x = (this.board_width + this.pocket_cell_size * 3) + col * this.pocket_cell_size;
+            y = (row - 6) * this.pocket_cell_size + this.board_height - this.cell_size;
+            size = this.pocket_cell_size;
+        } else {
+            x = col * this.cell_size + this.pocket_cell_size * 3;
+            y = (row - 2) * this.cell_size;
+            size = this.cell_size;
+        }
+    
+        if (unit.num !== 0) {
+            const img = new Image();
+            img.src = `../images/${unit.team}_${unit.num}.png`; // 이미지 파일 경로에 맞게 수정
+            img.onload = () => {
+                this.ctx.drawImage(img, x, y, size, size);
+            };
+        }
+    }
+
+    /* canvas에 image draw
+        parameter: src, x, y, width, height
+            src: 그릴 image 파일의 위치
+            x, y: 그릴 위치의 시작점
+            width, height: 그릴 이미지의 크기 */
+    _drawImage(src, x, y, width, height) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                this.ctx.drawImage(img, x, y, width, height);
+                resolve();
+            };
+            img.onerror = reject;
+        });
+    }
+
     /********************************* public *********************************/
-    /* state, turn 초기화 */
+    /* 게임 초기화 */
     reset() {
         this.state = JSON.parse(JSON.stringify(this.init_state));
         this.who_turn = 'red';
@@ -329,7 +391,8 @@ export class Environment {
     }
 
     /* 보드를 업데이트
-    */
+        parameter: container_id
+            해당 html 요소에 canvas를 통해 현재 보드 상태를 rendering */
     render(container_id) {
         const container = document.getElementById(container_id);
         if (!container) {
@@ -354,44 +417,6 @@ export class Environment {
                 }
             })
             .catch(error => console.error(error));
-    }
-
-    _drawCell(row, col, unit) {
-        let x, y, size;
-    
-        if (row < 2) {
-            x = col * this.pocket_cell_size;
-            y = row * this.pocket_cell_size;
-            size = this.pocket_cell_size;
-        } else if (row > 5) {
-            x = (this.board_width + this.pocket_cell_size * 3) + col * this.pocket_cell_size;
-            y = (row - 6) * this.pocket_cell_size + this.board_height - this.cell_size;
-            size = this.pocket_cell_size;
-        } else {
-            x = col * this.cell_size + this.pocket_cell_size * 3;
-            y = (row - 2) * this.cell_size;
-            size = this.cell_size;
-        }
-    
-        if (unit.num !== 0) {
-            const img = new Image();
-            img.src = `../images/${unit.team}_${unit.num}.png`; // 이미지 파일 경로에 맞게 수정
-            img.onload = () => {
-                this.ctx.drawImage(img, x, y, size, size);
-            };
-        }
-    }
-
-    _drawImage(src, x, y, width, height) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => {
-                this.ctx.drawImage(img, x, y, width, height);
-                resolve();
-            };
-            img.onerror = reject;
-        });
     }
 
     /* episode step
