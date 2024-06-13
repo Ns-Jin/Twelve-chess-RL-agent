@@ -22,6 +22,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
     const form = event.target;
     const TOTAL_EPISODES = parseInt(form.episodes.value);
+    const TEST_EPISODES = TOTAL_EPISODES / 100;
     const modelArchitecture = form.modelArchitecture.value.split('-').map(Number);
     const discountFactor = parseFloat(form.discountFactor.value);
     const learningRate = parseFloat(form.learningRate.value);
@@ -82,19 +83,18 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     action = agent.get_action(state, possible_actions);
                 }
                 else {
-                    // if(e < EPISODES_THRESHOLD) {
+                    if(e < EPISODES_THRESHOLD) {
                         // 랜덤 행동
-                    const random_index = Math.floor(Math.random() * possible_actions.length);
-                    action = possible_actions[random_index];
-                    // }
-                    // else {
-                    //     // dqn 기반 행동
-                    //     action = opponent.get_action(state, possible_actions);
-                    // }
+                        const random_index = Math.floor(Math.random() * possible_actions.length);
+                        action = possible_actions[random_index];
+                    }
+                    else {
+                        // dqn 기반 행동
+                        action = opponent.get_action(state, possible_actions);
+                    }
                 }
                 ({next_state, turn, reward, done} = env.step(action));
                 
-
                 if(previous_state !== undefined) {
                     // 이전 상태와 행동에 대해 메모리에 추가
                     const agentToUpdate = (turn === agent.turn ? opponent : agent);
@@ -140,7 +140,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                         agent_win_count++;
                     }
                     global_timesteps += local_timesteps;
-                    local_timesteps = 0;
 
                     if(agent.render) {
                         // 각 에피소드마다 타임스텝을 plot
@@ -171,14 +170,132 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     }
 
                     console.log(`episode: ${e}, score: ${score}, memory length: ${agent.memory.length}, epsilon: ${agent.epsilon}, timestep: ${global_timesteps} (+${local_timesteps})`);
+                    local_timesteps = 0;
                 }
             }
         }
         console.log(`Total episodes: ${TOTAL_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TOTAL_EPISODES}`);
+
+        agent_win_count = 0;
+        for(let e=0;e<TEST_EPISODES;e++) {
+            done = false;
+            let score = 0.0;
+            
+            ({ state, turn } = env.reset());
+
+            while (!done) {
+                possible_actions = env.find_possible_actions(state, turn);
+                if (turn == agent.turn) {
+                    action = agent.get_action(state, possible_actions);
+                }
+                else {
+                    // 랜덤 행동
+                    const random_index = Math.floor(Math.random() * possible_actions.length);
+                    action = possible_actions[random_index];
+                }
+                ({next_state, turn, reward, done} = env.step(action));
+
+                if(turn == agent.turn) {
+                    score += reward;
+                }
+                else {
+                    score -= reward;
+                }
+
+                if (done) {
+                    env.reset();
+                    
+                    if(score > 0) {
+                        agent_win_count++;
+                    }
+
+                    // 각 에피소드마다 타임스텝을 plot
+                    scores.push(score);
+                    episodes.push(e);
+                    
+                    const trace = {
+                        x: episodes,
+                        y: scores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        marker: { color: 'blue' }
+                    };
+        
+                    const layout = {
+                        title: 'Score per episode',
+                        xaxis: { title: 'Episode' },
+                        yaxis: { title: 'Score' }
+                    };
+        
+                    Plotly.newPlot('plot', [trace], layout);
+                }
+            }
+        }
+        console.log(`Test episodes: ${TEST_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TEST_EPISODES}`);
+
+        agent_win_count = 0;
+        for(let e=0;e<TEST_EPISODES;e++) {
+            done = false;
+            let score = 0.0;
+            
+            ({ state, turn } = env.reset());
+
+            while (!done) {
+                possible_actions = env.find_possible_actions(state, turn);
+                if (turn == agent.turn) {
+                    // 랜덤 행동
+                    const random_index = Math.floor(Math.random() * possible_actions.length);
+                    action = possible_actions[random_index];
+                }
+                else {
+                    opponent.get_action(state,possible_actions);
+                }
+                ({next_state, turn, reward, done} = env.step(action));
+
+                if(turn == agent.turn) {
+                    score += reward;
+                }
+                else {
+                    score -= reward;
+                }
+
+                if (done) {
+                    env.reset();
+                    
+                    if(score > 0) {
+                        agent_win_count++;
+                    }
+
+                    // 각 에피소드마다 타임스텝을 plot
+                    scores.push(score);
+                    episodes.push(e);
+                    
+                    const trace = {
+                        x: episodes,
+                        y: scores,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        marker: { color: 'blue' }
+                    };
+        
+                    const layout = {
+                        title: 'Score per episode',
+                        xaxis: { title: 'Episode' },
+                        yaxis: { title: 'Score' }
+                    };
+        
+                    Plotly.newPlot('plot', [trace], layout);
+                }
+            }
+        }
+        console.log(`Test episodes: ${TEST_EPISODES}, Opponent win episodes: ${TEST_EPISODES - agent_win_count}, Agent win rate: ${(TEST_EPISODES - agent_win_count) / TEST_EPISODES}`);
+        
         await agent.save_model("dqn_agent");
         await opponent.save_model("opponent");
         await agent.save_model_to_file("dqn_agent");
         await opponent.save_model_to_file("opponent");
+
+        
     } catch (error) {
         console.log('에러 발생:', error.message);
     } finally {

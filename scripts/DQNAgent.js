@@ -98,7 +98,7 @@ export class DQNAgent {
         this.learning_rate = learning_rate;      // 0.01
         this.epsilon = 1.0;
         this.epsilon_min = 0.005;
-        this.epsilon_decay = (this.epsilon - this.epsilon_min) / (episodes * 7); // 경험론적 수치
+        this.epsilon_decay = (this.epsilon - this.epsilon_min) / (episodes * 8); // 경험론적 수치
         this.batch_size = batch_size;            // 64
         this.train_start = 2000;                 // 학습 시작 시점
         this.model_architecture = model_architecture;
