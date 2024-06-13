@@ -52,8 +52,8 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
     try {
         const env = new Environment(100);
-        const agent = new DQNAgent('red',env.board_col * env.board_row,env.action_size,modelArchitecture,discountFactor,learningRate,batchSize,render);
-        const opponent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, modelArchitecture, discountFactor, learningRate, batchSize, render);
+        const agent = new DQNAgent('red', env.board_col * env.board_row,env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
+        const opponent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
 
         let state, next_state, turn, reward, done, action, possible_actions, enemy_action, enemy_reward, enemy_next_state;
         let agent_win_count = 0;

@@ -88,7 +88,7 @@ export class Deque {
 
 
 export class DQNAgent {
-    constructor(turn, state_size, action_size, model_architecture=[64], discount_factor=0.99, learning_rate=0.01, batch_size=64, render=true) {
+    constructor(turn, state_size, action_size, episodes = 50000, model_architecture=[64], discount_factor=0.99, learning_rate=0.01, batch_size=64, render=true) {
         this.turn = turn;
         
         this.render = render;
@@ -101,7 +101,7 @@ export class DQNAgent {
         this.learning_rate = learning_rate;      // 0.01
         this.epsilon = 1.0;
         this.epsilon_min = 0.005;
-        this.epsilon_decay = (this.epsilon - this.epsilon_min) / 100000;
+        this.epsilon_decay = (this.epsilon - this.epsilon_min) / (episodes * 10);
         this.batch_size = batch_size;            // 64
         this.train_start = 1000;                 // 학습 시작 시점
         this.model_architecture = model_architecture;
