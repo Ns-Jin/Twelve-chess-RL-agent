@@ -90,6 +90,25 @@ header img {
     background-color: #45a049;
 }
 
+#stop-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+#stop-btn:disabled {
+    background-color: #9c9c9c;
+    cursor:not-allowed;
+}
+
+#stop-btn:enabled:hover {
+    background-color: #45a049;
+}
+
 #render_area {
     height: 100%;
     background-color: #fff;

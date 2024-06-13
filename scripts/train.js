@@ -34,8 +34,17 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         let state, next_state, turn, reward, done, action, possible_actions, enemy_action, enemy_reward, enemy_next_state;
         let scores = [], episodes = [];
         let global_timesteps = 0, local_timesteps = 0;
-        
+        let early_stop_signal = false;
+
+        document.getElementById('stop-btn').disabled = false;
+        document.getElementById('stop-btn').addEventListener('click', async function() {
+            early_stop_signal = true;
+        });
+
         for(let e=0;e<TOTAL_EPISODES;e++) {
+            if(early_stop_signal) {
+                break;
+            }
             done = false;
             let score = 0.0;
             
