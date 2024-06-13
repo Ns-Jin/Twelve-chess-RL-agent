@@ -138,9 +138,33 @@ export class DQNAgent {
         this.target_model.setWeights(this.model.getWeights());
     }
 
+    sortSpecificRows(state, rowIndexes) {
+        // 주어진 행 인덱스에 대해 각 행을 정렬합니다.
+        let temp = [];
+        temp.push(...state[0]);
+        temp.push(...state[1]);
+        temp.sort();
+        for(let i=0;i<2;i++) {
+            for(let j=0;j<3;j++) {
+                state[i][j] = temp[3*i+j];
+            }
+        }
+        temp = [];
+        temp.push(...state[6]);
+        temp.push(...state[7]);
+        temp.sort();
+        for(let i=6;i<8;i++) {
+            for(let j=0;j<3;j++) {
+                state[i][j] = temp[3*(i-6)+j];
+            }
+        }
+        return state;
+    }
+
     extract_board_state(state) {
         return tf.tidy(() => {
-            const boardState = state.map(row => row.map(cell => cell.num));
+            const tempBoardState = state.map(row => row.map(cell => cell.num));
+            const boardState = this.sortSpecificRows(tempBoardState, [0,1]);
             const reshapedState = boardState.map(row => row.map(cell => [cell]));
             const tensor = tf.tensor3d(reshapedState);
             return tensor;

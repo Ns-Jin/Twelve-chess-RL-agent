@@ -211,6 +211,27 @@ export class Environment {
         return temp_state;
     }
 
+    // 왕과 자가 상대 구역에 있는지 확인하고 승리 조건을 체크하는 함수
+    _check_king_and_ja_in_opponent_area() {
+        for (let row = 0; row < this.state.length; row++) {
+            for (let col = 0; col < this.state[row].length; col++) {
+                const cell = this.state[row][col];
+                if (cell.num === 2 && cell.team === 'red' && row === 2) { // red 왕이 green 구역에 있는 경우
+                    this.red_touch_down = true; // red 왕이 green 구역에 도달
+                }
+                else if (cell.num === 7 && cell.team === 'green' && row === 5) { // green 왕이 red 구역에 있는 경우
+                    this.green_touch_down = true; // green 왕이 red 구역에 도달
+                }
+                else if (cell.num === 4 && cell.team === 'red' && row === 2) { // red 왕이 green 구역에 있는 경우
+                    this.state[row][col] = red_후;
+                }
+                else if (cell.num === 9 && cell.team === 'green' && row === 5) { // green 왕이 red 구역에 있는 경우
+                    this.state[row][col] = green_후;
+                }
+            }
+        }
+    }
+
     /* action을 수행하여 state를 업데이트
         parameter: action
             {'current_location': [x,y], 'target_location': [x',y']} x,y의 말을 x',y'로 이동
@@ -379,15 +400,25 @@ export class Environment {
         let done = false;
         let turn = this.who_turn;
         let reward = this._update_state(action, turn);
+
+        this._check_king_and_ja_in_opponent_area();
+
         // 게임이 끝났는지 확인
         if(reward == FINALLY_REWARD) {
             done = true;
         }
+        else if ((turn === 'green' && this.red_touch_down) || (turn === 'red' && this.green_touch_down)) {
+            // 왕이 한 턴 동안 상대 구역에 버티면 승리
+            reward = -FINALLY_REWARD;
+            done = true;
+            this._update_turn();
+        }
+
         // 턴을 넘김
         this._update_turn();
         turn = this.who_turn;
-        
         let next_state = this.state;
+
         return {next_state, turn, reward, done}
     }
 }

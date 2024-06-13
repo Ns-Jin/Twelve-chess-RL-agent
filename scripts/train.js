@@ -97,7 +97,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
                 if(previous_state !== undefined) {
                     // 이전 상태와 행동에 대해 메모리에 추가
-                    const agentToUpdate = (turn === 'red' ? opponent : agent);
+                    const agentToUpdate = (turn === agent.turn ? opponent : agent);
                     if ((turn == agent.turn) || (turn == opponent.turn && e >= EPISODES_THRESHOLD)) {
                         agent.append_sample(previous_state, previous_action, previous_reward - reward, next_state, done);
                     }
