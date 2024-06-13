@@ -82,15 +82,15 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     action = agent.get_action(state, possible_actions);
                 }
                 else {
-                    if(e < EPISODES_THRESHOLD) {
+                    // if(e < EPISODES_THRESHOLD) {
                         // 랜덤 행동
-                        const random_index = Math.floor(Math.random() * possible_actions.length);
-                        action = possible_actions[random_index];
-                    }
-                    else {
-                        // dqn 기반 행동
-                        action = opponent.get_action(state, possible_actions);
-                    }
+                    const random_index = Math.floor(Math.random() * possible_actions.length);
+                    action = possible_actions[random_index];
+                    // }
+                    // else {
+                    //     // dqn 기반 행동
+                    //     action = opponent.get_action(state, possible_actions);
+                    // }
                 }
                 ({next_state, turn, reward, done} = env.step(action));
                 
