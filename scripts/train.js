@@ -56,6 +56,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         const opponent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, modelArchitecture, discountFactor, learningRate, batchSize, render);
 
         let state, next_state, turn, reward, done, action, possible_actions, enemy_action, enemy_reward, enemy_next_state;
+        let agent_win_count = 0;
         let scores = [], episodes = [];
         let global_timesteps = 0, local_timesteps = 0;
         const EPISODES_THRESHOLD = parseInt(TOTAL_EPISODES * 0.7);
@@ -115,17 +116,17 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 else {
                     score -= reward;
                 }
-                
+
                 if(agent.render) {
                     env.render("render_area");
                     await new Promise(resolve => setTimeout(resolve, renderSpeed));
                 }
                 if (done) {
                     // 마지막 턴의 보상 업데이트
-                    (turn === 'red' ? agent : opponent).append_sample(previous_state, previous_action, previous_reward, next_state, done);
+                    (turn === agent.turn ? agent : opponent).append_sample(previous_state, previous_action, previous_reward, next_state, done);
                 }
-                if ((turn === 'red' ? agent.memory : opponent.memory).length >= (turn === 'red' ? agent.train_start : opponent.train_pos)) {
-                    await (turn === 'red' ? agent : opponent).train_model();
+                if ((turn === agent.turn ? agent.memory : opponent.memory).length >= (turn === agent.turn ? agent.train_start : opponent.train_pos)) {
+                    await (turn === agent.turn ? agent : opponent).train_model();
                 }
 
                 if (done) {
@@ -135,6 +136,9 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                         opponent.update_target_model();
                     }
                     
+                    if(score > 0) {
+                        agent_win_count++;
+                    }
                     global_timesteps += local_timesteps;
                     local_timesteps = 0;
 
@@ -170,6 +174,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 }
             }
         }
+        console.log(`Total episodes: ${TOTAL_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TOTAL_EPISODES}`);
         await agent.save_model("dqn_agent");
         await opponent.save_model("opponent");
         await agent.save_model_to_file("dqn_agent");
