@@ -277,6 +277,8 @@ export class Environment {
     reset() {
         this.state = JSON.parse(JSON.stringify(this.init_state));
         this.who_turn = 'red';
+        this.red_touch_down = false;
+        this.green_touch_down = false;
 
         return { state: this.state, turn: this.who_turn };
     }
