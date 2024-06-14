@@ -127,7 +127,8 @@ export class A2CAgent {
             const sortedBoardState = this._sort_state(boardState, [0,1]);
             const reshapedState = sortedBoardState.map(row => row.map(cell => [cell]));
             const tensor = tf.tensor3d(reshapedState);
-            return tensor;
+            const expend_tensor = tf.expandDims(tensor, 0);
+            return expend_tensor;
         });
     }
     
@@ -140,54 +141,86 @@ export class A2CAgent {
         return: action
             현재 상태에서 수행할 수 있는 action을 반환 */
     get_action(state, possible_actions) {
-        const logits = this.actor.predict(tf.tensor2d(state, [1, this.state_size]));
+        const board_state = this.extract_board_state(state);
+        const logits = this.actor_model.predict(board_state);
         const probabilities = logits.dataSync();
+        board_state.dispose();
         logits.dispose();
     
-        // 모든 행동에 대해 확률을 0으로 초기화
-        const masked_probabilities = new Array(this.action_size).fill(0);
-        
-        // 가능한 행동들의 인덱스에 해당하는 확률만 설정
+        let max_probability = -Infinity;
+        let selected_action = -1;
+
         possible_actions.forEach(action => {
-            masked_probabilities[action] = probabilities[action];
+            if (probabilities[action] > max_probability) {
+                max_probability = probabilities[action];
+                selected_action = action;
+            }
         });
-    
-        // 확률 정규화
-        const totalProbability = masked_probabilities.reduce((acc, prob) => acc + prob, 0);
-        const normalized_probabilities = masked_probabilities.map(prob => prob / totalProbability);
-    
-        // 행동 선택
-        const action = tf.multinomial(tf.tensor2d([normalized_probabilities], [1, this.action_size]), 1).dataSync()[0];
-        return action;
+
+        if(selected_action == -1) {
+            const random_index = Math.floor(Math.random() * possible_actions.length);
+            selected_action = possible_actions[random_index];
+        }
+
+        return selected_action;
     }
             
 
-    train_model(state, action, reward, next_state, done) {
-        const current_value = this.critic.predict(tf.tensor2d(state, [1, this.state_size])).dataSync();
-        const next_value = this.critic.predict(tf.tensor2d(next_state, [1, this.state_size])).dataSync();
-
+    async train_model(state, action, reward, next_state, done, possible_actions) {
+        const board_state = this.extract_board_state(state);
+        const board_next_state = this.extract_board_state(next_state);
+        const current_value = this.critic_model.predict(board_state).dataSync();
+        const next_value = this.critic_model.predict(board_next_state).dataSync();
+        
         const target = done ? reward : reward + this.discount_factor * next_value;
         const advantage = target - current_value;
+        
+        const target_tensor = tf.tensor2d([target], [1, 1]);
 
         // Update critic
-        this.critic.fit(tf.tensor2d(state, [1, this.state_size]), tf.tensor2d([target], [1, 1]), {epochs: 1});
+        await this.critic_model.fit(
+            board_state, 
+            target_tensor,
+            { epochs: 1, batchSize: 1, verbose: 0}
+        );
+        
+        // Update actor: consider only possible actions
+        const logits = this.actor_model.predict(board_state);
+        const probabilities = logits.dataSync();
+        const masked_probabilities = probabilities.map((prob, index) => possible_actions.includes(index) ? prob : 0);
+        
+        // Normalize the probabilities to sum to 1 after masking
+        const sumProbabilities = masked_probabilities.reduce((acc, prob) => acc + prob, 0);
+        const normalized_probabilities = masked_probabilities.map(prob => prob / sumProbabilities);
+        
+        // Calculate log probabilities
+        const log_probabilities = normalized_probabilities.map(prob => Math.log(prob));
+        
+        const actor_loss = -log_probabilities[action] * advantage;
+        const actor_loss_tensor = tf.tensor1d([actor_loss], 'float32');
 
-        // Prepare actor update
-        const action_onehot = tf.oneHot(tf.tensor1d([action], 'int32'), this.action_size);
-        const log_prob = tf.log(tf.sum(tf.mul(this.actor.predict(tf.tensor2d(state, [1, this.state_size])), action_onehot)));
-        const actor_loss = tf.mul(tf.scalar(-1), tf.mul(log_prob, tf.scalar(advantage)));
+        // Train actor model
+        await this.actor_model.fit(
+            board_state,
+            tf.zeros([1, this.action_size]),
+            { epochs: 1, batchSize: 1, verbose: 0, 
+                onBatchEnd: async (batch, logs) => {
+                await this.actor_model.optimizer.minimize(() => actor_loss_tensor);
+            }}
+        );
 
-        // Update actor
-        const grads = tf.variableGrads(() => actor_loss);
-        this.actor.optimizer.applyGradients(grads.grads);
-        tf.dispose([action_onehot, log_prob, actor_loss, grads]);
+        // Cleanup tensors
+        board_state.dispose();
+        board_next_state.dispose();
+        target_tensor.dispose();
+        logits.dispose();
     }
 
     /* model을 indexedDB에 저장
         parameter: name
             name: 저장할 모델 이름 */
     async save_model(name) {
-        await this.model.save(`indexeddb://${name}`);
+        await this.actor_model.save(`indexeddb://${name}`);
 
         // 파라미터를 JSON으로 저장
         const params = {

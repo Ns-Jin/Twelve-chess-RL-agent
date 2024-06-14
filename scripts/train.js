@@ -1,5 +1,6 @@
 import { Environment } from "./environment.js";
 import { A2CAgent } from "./A2CAgent.js";
+import { DQNAgent } from "./DQNAgent.js";
 
 document.getElementById('back_icon').addEventListener('click', function() {
     window.location.href = '../index.html';
@@ -53,13 +54,13 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
     try {
         const env = new Environment(100);
-        const agent = new A2CAgent('red', env.board_col * env.board_row,env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, render);
-
+        const a2c_agent = new A2CAgent('red', env.board_col * env.board_row,env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, render);
+        const dqn_agent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
+        
         let state, next_state, turn, reward, done, action, possible_actions;
-        let agent_win_count = 0;
+        let a2c_agent_win_count = 0;
         let scores = [], episodes = [];
         let global_timesteps = 0, local_timesteps = 0;
-        const EPISODES_THRESHOLD = parseInt(TOTAL_EPISODES * 0.7);
         
         for(let e=0;e<TOTAL_EPISODES;e++) {
             if(early_stop_signal) {
@@ -72,56 +73,60 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
             let previous_reward = 0, previous_action, previous_state;
 
             while (!done) {
-                if(agent.render) {
+                if(a2c_agent.render) {
                     env.render("render_area");
                     await new Promise(resolve => setTimeout(resolve, renderSpeed));
                 }
-
                 possible_actions = env.find_possible_actions(state, turn);
-                if (turn == agent.turn) {
-                    action = agent.get_action(state, possible_actions);
+
+                if (turn == a2c_agent.turn) {
+                    action = a2c_agent.get_action(state, possible_actions);
                 }
                 else {
-                    const random_index = Math.floor(Math.random() * possible_actions.length);
-                    action = possible_actions[random_index];
+                    action = dqn_agent.get_action(state, possible_actions);
+                }
+
+                if(previous_state !== undefined && turn == a2c_agent.turn) {
+                    // 이전 상태와 행동에 대해 메모리에 추가
+                    dqn_agent.append_sample(previous_state, previous_action, previous_reward - reward, next_state, done);
                 }
 
                 ({next_state, turn, reward, done} = env.step(action));
 
-                agent.train_model(state, action, reward, next_state, done);
+                await a2c_agent.train_model(state, action, reward, next_state, done, possible_actions);
+                if(turn == dqn_agent.turn && dqn_agent.memory.length >= dqn_agent.train_start) {
+                    dqn_agent.train_model();
+                }
 
-                // 현재 턴의 상태, 행동, 보상을 저장
                 previous_state = state;
                 previous_action = action;
                 previous_reward = reward;
                 state = next_state;
                 local_timesteps++;
 
-                if(turn == agent.turn) {
+                if(turn == a2c_agent.turn) {
                     score += reward;
                 }
                 else {
                     score -= reward;
                 }
 
-                if(agent.render) {
+                if(a2c_agent.render) {
                     env.render("render_area");
                     await new Promise(resolve => setTimeout(resolve, renderSpeed));
                 }
 
-                if ((turn === agent.turn ? agent.memory : opponent.memory).length >= (turn === agent.turn ? agent.train_start : opponent.train_pos)) {
-                    await (turn === agent.turn ? agent : opponent).train_model();
-                }
-
                 if (done) {
                     env.reset();
-                    
+                    dqn_agent.append_sample(previous_state, previous_action, previous_reward, next_state, done);
+                    dqn_agent.update_target_model();
+
                     if(score > 0) {
-                        agent_win_count++;
+                        a2c_agent_win_count++;
                     }
                     global_timesteps += local_timesteps;
 
-                    if(agent.render) {
+                    if(a2c_agent.render) {
                         // 각 에피소드마다 타임스텝을 plot
                         scores.push(score);
                         episodes.push(e);
@@ -145,19 +150,20 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
                     if (e % 500 == 0) {
                         // 500 epi 마다 모델 저장
-                        await agent.save_model("dqn_agent");
+                        await a2c_agent.save_model("dqn_agent");
                     }
 
-                    console.log(`episode: ${e}, score: ${score}, memory length: ${agent.memory.length}, epsilon: ${agent.epsilon}, timestep: ${global_timesteps} (+${local_timesteps})`);
+                    console.log(`episode: ${e}, score: ${score}, timestep: ${global_timesteps} (+${local_timesteps})`);
                     local_timesteps = 0;
                 }
             }
         }
-        console.log(`Total episodes: ${TOTAL_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TOTAL_EPISODES}`);
+        console.log(`Total episodes: ${TOTAL_EPISODES}, A2C Agent win episodes: ${a2c_agent_win_count}, Agent win rate: ${a2c_agent_win_count / TOTAL_EPISODES}`);
 
-        
-        await agent.save_model("dqn_agent");
-        await agent.save_model_to_file("dqn_agent");
+        await a2c_agent.save_model("a2c_agent");
+        await a2c_agent.save_model_to_file("a2c_agent");
+        await dqn_agent.save_model("dqn_agent");
+        await dqn_agent.save_model_to_file("dqn_agent");
     } catch (error) {
         console.log('에러 발생:', error.message);
     } finally {
