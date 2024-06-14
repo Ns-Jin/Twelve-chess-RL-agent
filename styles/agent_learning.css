@@ -175,11 +175,23 @@ header img {
 #plot_container {
     width: calc(100% - 40px); /* Account for the padding and margin */
     display: flex;
+    flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
 }
 
 #plot {
+    width: 100%;
+    max-width: 1000px; /* Adjust to combined width of form and render area */
+    margin-top: 20px;
+}
+
+#plot2 {
+    width: 100%;
+    max-width: 1000px; /* Adjust to combined width of form and render area */
+    margin-top: 20px;
+}
+#plot3 {
     width: 100%;
     max-width: 1000px; /* Adjust to combined width of form and render area */
     margin-top: 20px;

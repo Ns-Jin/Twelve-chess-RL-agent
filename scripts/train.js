@@ -33,7 +33,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
     document.getElementById('renderSpeed').addEventListener('input', function() {
         renderSpeed = parseInt(this.value);
         document.getElementById('renderSpeedValue').textContent = renderSpeed + 'ms';
-        console.log('Render Speed:', renderSpeed);
+        // console.log('Render Speed:', renderSpeed);
     });
 
     console.log('Episodes:', TOTAL_EPISODES);
@@ -177,6 +177,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         console.log(`Total episodes: ${TOTAL_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TOTAL_EPISODES}`);
 
         agent_win_count = 0;
+        scores = [];
         for(let e=0;e<TEST_EPISODES;e++) {
             done = false;
             let score = 0.0;
@@ -184,7 +185,9 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
             ({ state, turn } = env.reset());
 
             while (!done) {
+                console.log(state, turn);
                 possible_actions = env.find_possible_actions(state, turn);
+
                 if (turn == agent.turn) {
                     action = agent.get_action(state, possible_actions);
                 }
@@ -194,6 +197,8 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     action = possible_actions[random_index];
                 }
                 ({next_state, turn, reward, done} = env.step(action));
+
+                state = next_state;
 
                 if(turn == agent.turn) {
                     score += reward;
@@ -222,18 +227,20 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     };
         
                     const layout = {
-                        title: 'Score per episode',
+                        title: 'Agent score per test episode',
                         xaxis: { title: 'Episode' },
                         yaxis: { title: 'Score' }
                     };
         
-                    Plotly.newPlot('plot', [trace], layout);
+                    Plotly.newPlot('plot2', [trace], layout);
                 }
             }
         }
         console.log(`Test episodes: ${TEST_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TEST_EPISODES}`);
 
         agent_win_count = 0;
+        scores = [];
+
         for(let e=0;e<TEST_EPISODES;e++) {
             done = false;
             let score = 0.0;
@@ -252,7 +259,9 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 }
                 ({next_state, turn, reward, done} = env.step(action));
 
-                if(turn == agent.turn) {
+                state = next_state;
+
+                if(turn == opponent.turn) {
                     score += reward;
                 }
                 else {
@@ -279,16 +288,16 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     };
         
                     const layout = {
-                        title: 'Score per episode',
+                        title: 'Opponent score per test episode',
                         xaxis: { title: 'Episode' },
                         yaxis: { title: 'Score' }
                     };
         
-                    Plotly.newPlot('plot', [trace], layout);
+                    Plotly.newPlot('plot3', [trace], layout);
                 }
             }
         }
-        console.log(`Test episodes: ${TEST_EPISODES}, Opponent win episodes: ${TEST_EPISODES - agent_win_count}, Agent win rate: ${(TEST_EPISODES - agent_win_count) / TEST_EPISODES}`);
+        console.log(`Test episodes: ${TEST_EPISODES}, Opponent win episodes: ${agent_win_count}, Opponent win rate: ${agent_win_count / TEST_EPISODES}`);
         
         await agent.save_model("dqn_agent");
         await opponent.save_model("opponent");

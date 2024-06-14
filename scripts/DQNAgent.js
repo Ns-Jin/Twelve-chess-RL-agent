@@ -123,10 +123,10 @@ export class DQNAgent {
             생성된 모델 리턴 */
     _build_model(model_architecture) {
         const model = tf.sequential();
-        model.add(tf.layers.conv2d({ inputShape: [8,3,1], filters: parseInt(this.model_architecture[0]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
+        model.add(tf.layers.conv2d({ inputShape: [8,3,1], filters: parseInt(this.model_architecture[0]), kernelSize: [3, 3], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
         model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1], padding: 'same' }));
         for(let i=1;i<model_architecture.length;i++) {
-            model.add(tf.layers.conv2d({ filters: parseInt(this.model_architecture[i]), kernelSize: [2, 2], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
+            model.add(tf.layers.conv2d({ filters: parseInt(this.model_architecture[i]), kernelSize: [3, 3], padding: 'same', activation: 'relu', kernelInitializer: 'heUniform' }));
             model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [1, 1], padding: 'same' }));
         }
         model.add(tf.layers.flatten());
