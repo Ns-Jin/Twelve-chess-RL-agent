@@ -87,24 +87,15 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     action = agent.get_action(state, possible_actions);
                 }
                 else {
-                    if(e < EPISODES_THRESHOLD) {
-                        // 랜덤 행동
-                        const random_index = Math.floor(Math.random() * possible_actions.length);
-                        action = possible_actions[random_index];
-                    }
-                    else {
-                        // dqn 기반 행동
-                        action = opponent.get_action(state, possible_actions);
-                    }
+                    // 랜덤 행동
+                    const random_index = Math.floor(Math.random() * possible_actions.length);
+                    action = possible_actions[random_index];
                 }
                 ({next_state, turn, reward, done} = env.step(action));
                 
                 if(previous_state !== undefined) {
                     // 이전 상태와 행동에 대해 메모리에 추가
-                    const agentToUpdate = (turn === agent.turn ? opponent : agent);
-                    if ((turn == agent.turn) || (turn == opponent.turn && e >= EPISODES_THRESHOLD)) {
-                        agent.append_sample(previous_state, previous_action, previous_reward - reward, next_state, done);
-                    }
+                    agent.append_sample(previous_state, previous_action, previous_reward - reward, next_state, done);
                 }
 
                 // 현재 턴의 상태, 행동, 보상을 저장
@@ -129,16 +120,14 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     // 마지막 턴의 보상 업데이트
                     (turn === agent.turn ? agent : opponent).append_sample(previous_state, previous_action, previous_reward, next_state, done);
                 }
-                if ((turn === agent.turn ? agent.memory : opponent.memory).length >= (turn === agent.turn ? agent.train_start : opponent.train_pos)) {
+                if ((turn === agent.turn ? agent.memory : opponent.memory).length >= (turn === agent.turn ? agent.train_start : opponent.train_start)) {
                     await (turn === agent.turn ? agent : opponent).train_model();
                 }
 
                 if (done) {
                     env.reset();
                     agent.update_target_model();
-                    if(e >= EPISODES_THRESHOLD) {
-                        opponent.update_target_model();
-                    }
+                    opponent.update_target_model();
                     
                     if(score > 0) {
                         agent_win_count++;
@@ -189,7 +178,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
             ({ state, turn } = env.reset());
 
             while (!done) {
-                console.log(state, turn);
                 possible_actions = env.find_possible_actions(state, turn);
 
                 if (turn == agent.turn) {
@@ -241,67 +229,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
             }
         }
         console.log(`Test episodes: ${TEST_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TEST_EPISODES}`);
-
-        agent_win_count = 0;
-        scores = [];
-
-        for(let e=0;e<TEST_EPISODES;e++) {
-            done = false;
-            let score = 0.0;
-            
-            ({ state, turn } = env.reset());
-
-            while (!done) {
-                possible_actions = env.find_possible_actions(state, turn);
-                if (turn == agent.turn) {
-                    // 랜덤 행동
-                    const random_index = Math.floor(Math.random() * possible_actions.length);
-                    action = possible_actions[random_index];
-                }
-                else {
-                    opponent.get_action(state,possible_actions);
-                }
-                ({next_state, turn, reward, done} = env.step(action));
-
-                state = next_state;
-
-                if(turn == opponent.turn) {
-                    score += reward;
-                }
-                else {
-                    score -= reward;
-                }
-
-                if (done) {
-                    env.reset();
-                    
-                    if(score > 0) {
-                        agent_win_count++;
-                    }
-
-                    // 각 에피소드마다 타임스텝을 plot
-                    scores.push(score);
-                    episodes.push(e);
-                    
-                    const trace = {
-                        x: episodes,
-                        y: scores,
-                        type: 'scatter',
-                        mode: 'lines+markers',
-                        marker: { color: 'blue' }
-                    };
-        
-                    const layout = {
-                        title: 'Opponent score per test episode',
-                        xaxis: { title: 'Episode' },
-                        yaxis: { title: 'Score' }
-                    };
-        
-                    Plotly.newPlot('plot3', [trace], layout);
-                }
-            }
-        }
-        console.log(`Test episodes: ${TEST_EPISODES}, Opponent win episodes: ${agent_win_count}, Opponent win rate: ${agent_win_count / TEST_EPISODES}`);
         
         await agent.save_model("dqn_agent");
         await opponent.save_model("opponent");
