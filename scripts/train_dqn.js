@@ -58,13 +58,11 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
     try {
         const env = new Environment(100);
         const agent = new DQNAgent('red', env.board_col * env.board_row,env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
-        const opponent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
 
-        let state, next_state, turn, reward, done, action, possible_actions, enemy_action, enemy_reward, enemy_next_state;
+        let state, next_state, turn, reward, done, action, possible_actions;
         let agent_win_count = 0;
         let scores = [], episodes = [];
         let global_timesteps = 0, local_timesteps = 0;
-        const EPISODES_THRESHOLD = parseInt(TOTAL_EPISODES * 0.7);
         
         for(let e=0;e<TOTAL_EPISODES;e++) {
             if(early_stop_signal) {
@@ -116,18 +114,17 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     env.render("render_area");
                     await new Promise(resolve => setTimeout(resolve, renderSpeed));
                 }
-                if (done) {
+                if (done && turn == agent.turn) {
                     // 마지막 턴의 보상 업데이트
-                    (turn === agent.turn ? agent : opponent).append_sample(previous_state, previous_action, previous_reward, next_state, done);
+                    agent.append_sample(previous_state, previous_action, previous_reward, next_state, done);
                 }
-                if ((turn === agent.turn ? agent.memory : opponent.memory).length >= (turn === agent.turn ? agent.train_start : opponent.train_start)) {
-                    await (turn === agent.turn ? agent : opponent).train_model();
+                if (agent.memory.length >= agent.train_start) {
+                    await agent.train_model();
                 }
 
                 if (done) {
                     env.reset();
                     agent.update_target_model();
-                    opponent.update_target_model();
                     
                     if(score > 0) {
                         agent_win_count++;
@@ -159,7 +156,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     if (e % 500 == 0) {
                         // 500 epi 마다 모델 저장
                         await agent.save_model("dqn_agent");
-                        await opponent.save_model("opponent");
                     }
 
                     console.log(`episode: ${e}, score: ${score}, memory length: ${agent.memory.length}, epsilon: ${agent.epsilon}, timestep: ${global_timesteps} (+${local_timesteps})`);
@@ -231,11 +227,8 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         console.log(`Test episodes: ${TEST_EPISODES}, Agent win episodes: ${agent_win_count}, Agent win rate: ${agent_win_count / TEST_EPISODES}`);
         
         await agent.save_model("dqn_agent");
-        await opponent.save_model("opponent");
         await agent.save_model_to_file("dqn_agent");
-        await opponent.save_model_to_file("opponent");
 
-        
     } catch (error) {
         console.log('에러 발생:', error.message);
     } finally {
