@@ -5,6 +5,10 @@ document.getElementById('back_icon').addEventListener('click', function() {
     window.location.href = '../index.html';
 });
 
+document.getElementById('undo_logo').addEventListener('click', function() {
+    window.location.href = './agent_learning.html';
+});
+
 document.getElementById('episodes').addEventListener('input', function() {
     const episodesValue = parseInt(this.value);
     const renderSelect = document.getElementById('render');

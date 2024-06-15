@@ -144,6 +144,7 @@ export class A2CAgent {
         const board_state = this.extract_board_state(state);
         const logits = this.actor_model.predict(board_state);
         const probabilities = logits.dataSync();
+
         board_state.dispose();
         logits.dispose();
     
@@ -167,53 +168,55 @@ export class A2CAgent {
             
 
     async train_model(state, action, reward, next_state, done, possible_actions) {
-        const board_state = this.extract_board_state(state);
-        const board_next_state = this.extract_board_state(next_state);
-        const current_value = this.critic_model.predict(board_state).dataSync();
-        const next_value = this.critic_model.predict(board_next_state).dataSync();
-        
-        const target = done ? reward : reward + this.discount_factor * next_value;
-        const advantage = target - current_value;
-        
-        const target_tensor = tf.tensor2d([target], [1, 1]);
+        await tf.tidy(async () => {
+            const board_state = this.extract_board_state(state);
+            const board_next_state = this.extract_board_state(next_state);
+            const current_value = this.critic_model.predict(board_state).dataSync();
+            const next_value = this.critic_model.predict(board_next_state).dataSync();
+            
+            const target = done ? reward : reward + this.discount_factor * next_value;
+            const advantage = target - current_value;
+            
+            const target_tensor = tf.tensor2d([target], [1, 1]);
 
-        // Update critic
-        await this.critic_model.fit(
-            board_state, 
-            target_tensor,
-            { epochs: 1, batchSize: 1, verbose: 0}
-        );
-        
-        // Update actor: consider only possible actions
-        const logits = this.actor_model.predict(board_state);
-        const probabilities = logits.dataSync();
-        const masked_probabilities = probabilities.map((prob, index) => possible_actions.includes(index) ? prob : 0);
-        
-        // Normalize the probabilities to sum to 1 after masking
-        const sumProbabilities = masked_probabilities.reduce((acc, prob) => acc + prob, 0);
-        const normalized_probabilities = masked_probabilities.map(prob => prob / sumProbabilities);
-        
-        // Calculate log probabilities
-        const log_probabilities = normalized_probabilities.map(prob => Math.log(prob));
-        
-        const actor_loss = -log_probabilities[action] * advantage;
-        const actor_loss_tensor = tf.tensor1d([actor_loss], 'float32');
+            // Update critic
+            await this.critic_model.fit(
+                board_state, 
+                target_tensor,
+                { epochs: 1, batchSize: 1, verbose: 0}
+            );
+            
+            // Update actor: consider only possible actions
+            const logits = this.actor_model.predict(board_state);
+            const probabilities = logits.dataSync();
+            const masked_probabilities = probabilities.map((prob, index) => possible_actions.includes(index) ? prob : 0);
+            
+            // Normalize the probabilities to sum to 1 after masking
+            const sumProbabilities = masked_probabilities.reduce((acc, prob) => acc + prob, 0);
+            const normalized_probabilities = masked_probabilities.map(prob => prob / sumProbabilities);
+            
+            // Calculate log probabilities
+            const log_probabilities = normalized_probabilities.map(prob => Math.log(prob));
+            
+            const actor_loss = -log_probabilities[action] * advantage;
+            const actor_loss_tensor = tf.tensor1d([actor_loss], 'float32');
 
-        // Train actor model
-        await this.actor_model.fit(
-            board_state,
-            tf.zeros([1, this.action_size]),
-            { epochs: 1, batchSize: 1, verbose: 0, 
-                onBatchEnd: async (batch, logs) => {
-                await this.actor_model.optimizer.minimize(() => actor_loss_tensor);
-            }}
-        );
+            // Train actor model
+            await this.actor_model.fit(
+                board_state,
+                tf.zeros([1, this.action_size]),
+                { epochs: 1, batchSize: 1, verbose: 0, 
+                    onBatchEnd: async (batch, logs) => {
+                    await this.actor_model.optimizer.minimize(() => actor_loss_tensor);
+                }}
+            );
 
-        // Cleanup tensors
-        board_state.dispose();
-        board_next_state.dispose();
-        target_tensor.dispose();
-        logits.dispose();
+            // Cleanup tensors
+            board_state.dispose();
+            board_next_state.dispose();
+            target_tensor.dispose();
+            logits.dispose();
+        });
     }
 
     /* model을 indexedDB에 저장
@@ -229,25 +232,24 @@ export class A2CAgent {
             action_size: this.action_size,
             model_architecture: this.model_architecture,
             discount_factor: this.discount_factor,
-            learning_rate: this.learning_rate,
-            batch_size: this.batch_size,
+            actor_lr: this.actor_lr,
+            critic_lr: this.critic_lr,
             render: this.render
         };
 
         // IndexedDB에 파라미터 저장
-        const dbRequest = indexedDB.open('DQNAgentDB', 1);
-
+        let dbRequest = indexedDB.open('A2CAgentDB', 1);
         dbRequest.onupgradeneeded = function(event) {
-            const db = event.target.result;
+            let db = event.target.result;
             if (!db.objectStoreNames.contains('agentParams')) {
                 db.createObjectStore('agentParams', { keyPath: 'name' });
             }
         };
 
         dbRequest.onsuccess = function(event) {
-            const db = event.target.result;
-            const transaction = db.transaction(['agentParams'], 'readwrite');
-            const store = transaction.objectStore('agentParams');
+            let db = event.target.result;
+            let transaction = db.transaction(['agentParams'], 'readwrite');
+            let store = transaction.objectStore('agentParams');
             store.put({ name, params });
         };
 
