@@ -113,15 +113,13 @@ export class A2CAgent {
     _get_random_samples(array, indices) {
         return indices.map(index => array[index]);
     }
-    
-    /********************************* public *********************************/
 
     /* state를 모델의 입력으로 넣기위해 tensor화
         parameter: state
             state를 num의 값들로만 표현하고 tensor화 하여반환
         return tensor (tf.tensor3d)
             tensor3d의 형태 (8,3,1) 8개의 열, 3개의 행, 1개의 채널로 state를 표현 */
-    extract_board_state(state) {
+    _extract_board_state(state) {
         return tf.tidy(() => {
             const boardState = state.map(row => row.map(cell => cell.num));
             const sortedBoardState = this._sort_state(boardState, [0,1]);
@@ -132,6 +130,7 @@ export class A2CAgent {
         });
     }
     
+    /********************************* public *********************************/
 
     /* 현재 state에서 action 선택
         parameter: state
@@ -141,7 +140,7 @@ export class A2CAgent {
         return: action
             현재 상태에서 수행할 수 있는 action을 반환 */
     get_action(state, possible_actions) {
-        const board_state = this.extract_board_state(state);
+        const board_state = this._extract_board_state(state);
         const logits = this.actor_model.predict(board_state);
         const probabilities = logits.dataSync();
 
@@ -168,20 +167,20 @@ export class A2CAgent {
             
 
     async train_model(state, action, reward, next_state, done, possible_actions) {
-        const board_state = this.extract_board_state(state);
-        const board_next_state = this.extract_board_state(next_state);
+        const board_state = this._extract_board_state(state);
+        const board_next_state = this._extract_board_state(next_state);
         const current_value = this.critic_model.predict(board_state).dataSync();
         const next_value = this.critic_model.predict(board_next_state).dataSync();
         
         const target = done ? reward : reward + this.discount_factor * next_value;
         const advantage = target - current_value;
         
-        const target_tensor = tf.tensor2d([target], [1, 1]);
+        const advantage_tensor = tf.tensor2d([target], [1, 1]);
 
         // Update critic
         await this.critic_model.fit(
-            board_state, 
-            target_tensor,
+            board_state,
+            advantage_tensor,
             { epochs: 1, batchSize: 1, verbose: 0}
         );
         

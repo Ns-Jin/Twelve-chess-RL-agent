@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             agent = new DQNAgent('red', env.board_col * env.board_row, env.action_size);
             agent.load_model_from_file('dqn_agent');
         }
+        agent.epsilon = agent.epsilon_min;
 
         let state, next_state, turn, reward, done, action, possible_actions;
         done = false;

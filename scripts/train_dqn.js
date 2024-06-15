@@ -167,6 +167,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
         agent_win_count = 0;
         scores = [];
+        agent.epsilon = agent.epsilon_min;
         for(let e=0;e<TEST_EPISODES;e++) {
             done = false;
             let score = 0.0;

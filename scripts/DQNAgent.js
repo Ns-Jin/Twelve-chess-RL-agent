@@ -190,21 +190,13 @@ export class DQNAgent {
     _get_random_samples(array, indices) {
         return indices.map(index => array[index]);
     }
-    
-    /********************************* public *********************************/
-
-    /* 타겟 모델을 업데이트
-        타겟 모델을 모델로 덮어씌우며 업데이트 */
-    update_target_model() {
-        this.target_model.setWeights(this.model.getWeights());
-    }
 
     /* state를 모델의 입력으로 넣기위해 tensor화
         parameter: state
             state를 num의 값들로만 표현하고 tensor화 하여반환
         return tensor (tf.tensor3d)
             tensor3d의 형태 (8,3,1) 8개의 열, 3개의 행, 1개의 채널로 state를 표현 */
-    extract_board_state(state) {
+    _extract_board_state(state) {
         return tf.tidy(() => {
             const boardState = state.map(row => row.map(cell => cell.num));
             const sortedBoardState = this._sort_state(boardState, [0,1]);
@@ -214,6 +206,13 @@ export class DQNAgent {
         });
     }
     
+    /********************************* public *********************************/
+
+    /* 타겟 모델을 업데이트
+        타겟 모델을 모델로 덮어씌우며 업데이트 */
+    update_target_model() {
+        this.target_model.setWeights(this.model.getWeights());
+    }
 
     /* 현재 state에서 action 선택
         parameter: state
@@ -229,7 +228,7 @@ export class DQNAgent {
         }
         else {
             return tf.tidy(() => {
-                const board_state = this.extract_board_state(state);
+                const board_state = this._extract_board_state(state);
                 const q_values = this.model.predict(tf.expandDims(board_state, 0));
                 const q_values_array = q_values.arraySync()[0];
                 board_state.dispose();
@@ -273,8 +272,8 @@ export class DQNAgent {
         const batch = this._get_random_samples(memory_array, randomIndices);
 
         // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
-        const states = tf.stack(batch.map(sample => this.extract_board_state(sample.state)), 0);
-        const next_states = tf.stack(batch.map(sample => this.extract_board_state(sample.next_state)), 0);
+        const states = tf.stack(batch.map(sample => this._extract_board_state(sample.state)), 0);
+        const next_states = tf.stack(batch.map(sample => this._extract_board_state(sample.next_state)), 0);
 
         const targets = tf.tidy(() => {
             const current_q_values = this.model.predict(states);
