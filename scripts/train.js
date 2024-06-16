@@ -159,6 +159,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                         // 500 epi 마다 모델 저장
                         await a2c_agent.save_model("a2c_agent");
                         // await dqn_agent.save_model("dqn_agent");
+                        await new Promise(resolve => setTimeout(resolve, 5000));
                     }
 
                     console.log(`episode: ${e}, score: ${score}, timestep: ${global_timesteps} (+${local_timesteps})`);
