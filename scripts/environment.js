@@ -49,14 +49,14 @@ export class Environment {
         this.red_touch_down = false;
         this.green_touch_down = false;
 
-        this.ctx.canvas.addEventListener('webglcontextlost', (event) => {
-            event.preventDefault();
+        this.ctx.canvas.addEventListener('webglcontextlost', async (event) => {
+            await event.preventDefault();
             console.error('WebGL context lost');
         });
 
-        this.ctx.canvas.addEventListener('webglcontextrestored', () => {
+        this.ctx.canvas.addEventListener('webglcontextrestored', async () => {
             console.log('WebGL context restored');
-            this._reinit(); // 컨텍스트 복구 후 재초기화 로직 추가
+            await this._reinit(); // 컨텍스트 복구 후 재초기화 로직 추가
         });
     }
 
@@ -98,7 +98,7 @@ export class Environment {
     }
 
     /* 캔버스 컨텍스트가 사라지는 에러 해결을 위해 컨텍스트 재정의 */ 
-    _reinit() {
+    async _reinit() {
         this.ctx = this.canvas.getContext('2d'); // 예시: 컨텍스트 다시 얻기
         // 추가적인 재초기화 로직
     }

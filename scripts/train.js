@@ -67,6 +67,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         let global_timesteps = 0, local_timesteps = 0;
         
         for(let e=0;e<TOTAL_EPISODES;e++) {
+            console.log("Memory: " + tf.memory().numTensors);
             if(early_stop_signal) {
                 break;
             }

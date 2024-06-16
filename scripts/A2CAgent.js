@@ -175,12 +175,12 @@ export class A2CAgent {
         const target = done ? reward : reward + this.discount_factor * next_value;
         const advantage = target - current_value;
         
-        const advantage_tensor = tf.tensor2d([target], [1, 1]);
+        const target_tensor = tf.tensor2d([target], [1, 1]);
 
         // Update critic
         await this.critic_model.fit(
             board_state,
-            advantage_tensor,
+            target_tensor,
             { epochs: 1, batchSize: 1, verbose: 0}
         );
         
