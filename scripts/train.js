@@ -27,7 +27,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
     const form = event.target;
     const TOTAL_EPISODES = parseInt(form.episodes.value);
-    const TEST_EPISODES = TOTAL_EPISODES / 100;
+    const TEST_EPISODES = 500; //TOTAL_EPISODES/100;
     const modelArchitecture = form.modelArchitecture.value.split('-').map(Number);
     const discountFactor = parseFloat(form.discountFactor.value);
     const learningRate = parseFloat(form.learningRate.value);
@@ -59,6 +59,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
     try {
         const env = new Environment(100);
         const a2c_agent = new A2CAgent('red', env.board_col * env.board_row,env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, render);
+        a2c_agent.load_model("a2c_agent");
         // const dqn_agent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
         
         let state, next_state, turn, reward, done, action, possible_actions;
@@ -159,7 +160,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                         // 500 epi 마다 모델 저장
                         await a2c_agent.save_model("a2c_agent");
                         // await dqn_agent.save_model("dqn_agent");
-                        await new Promise(resolve => setTimeout(resolve, 5000));
                     }
 
                     console.log(`episode: ${e}, score: ${score}, timestep: ${global_timesteps} (+${local_timesteps})`);
@@ -180,7 +180,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
             while (!done) {
                 possible_actions = env.find_possible_actions(state, turn);
                 if (turn == a2c_agent.turn) {
-                    a2c_agent.get_action(state,possible_actions);
+                    action = a2c_agent.get_action(state,possible_actions);
                 }
                 else {
                     // 랜덤 행동
@@ -199,7 +199,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 }
 
                 if (done) {
-                    env.reset();
                     
                     if(score > 0) {
                         a2c_agent_win_count++;
@@ -227,7 +226,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 }
             }
         }
-        console.log(`Test episodes: ${TEST_EPISODES}, Opponent win episodes: ${a2c_agent_win_count}, Opponent win rate: ${a2c_agent_win_count / TEST_EPISODES}`);
+        console.log(`Test episodes: ${TEST_EPISODES}, A2C Agent win episodes: ${a2c_agent_win_count}, A2C Agent win rate: ${a2c_agent_win_count / TEST_EPISODES}`);
 
         await a2c_agent.save_model("a2c_agent");
         await a2c_agent.save_model_to_file("a2c_agent");
