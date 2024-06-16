@@ -177,29 +177,24 @@ export class A2CAgent {
         
         const target_tensor = tf.tensor2d([target], [1, 1]);
 
-        // Update critic
         await this.critic_model.fit(
             board_state,
             target_tensor,
             { epochs: 1, batchSize: 1, verbose: 0}
         );
         
-        // Update actor: consider only possible actions
         const logits = this.actor_model.predict(board_state);
         const probabilities = logits.dataSync();
         const masked_probabilities = probabilities.map((prob, index) => possible_actions.includes(index) ? prob : 0);
         
-        // Normalize the probabilities to sum to 1 after masking
         const sumProbabilities = masked_probabilities.reduce((acc, prob) => acc + prob, 0);
         const normalized_probabilities = masked_probabilities.map(prob => prob / sumProbabilities);
         
-        // Calculate log probabilities
         const log_probabilities = normalized_probabilities.map(prob => Math.log(prob));
         
         const actor_loss = -log_probabilities[action] * advantage;
         const actor_loss_tensor = tf.tensor1d([actor_loss], 'float32');
 
-        // Train actor model
         await this.actor_model.fit(
             board_state,
             tf.zeros([1, this.action_size]),
@@ -209,7 +204,6 @@ export class A2CAgent {
             }}
         );
 
-        // Cleanup tensors
         board_state.dispose();
         board_next_state.dispose();
         target_tensor.dispose();

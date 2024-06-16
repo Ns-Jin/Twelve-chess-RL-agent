@@ -1,5 +1,6 @@
 import { Environment } from "./environment.js";
 import { DQNAgent } from "./DQNAgent.js";
+import { A2CAgent } from "./A2CAgent.js";
 
 function loadAgentParams(name) {
     return new Promise((resolve, reject) => {

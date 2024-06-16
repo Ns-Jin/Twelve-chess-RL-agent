@@ -271,7 +271,6 @@ export class DQNAgent {
         const randomIndices = this._get_random_indices(memory_array.length, this.batch_size);
         const batch = this._get_random_samples(memory_array, randomIndices);
 
-        // const batch = tf.util.shuffle(memoryArray).slice(0, this.batch_size);
         const states = tf.stack(batch.map(sample => this._extract_board_state(sample.state)), 0);
         const next_states = tf.stack(batch.map(sample => this._extract_board_state(sample.next_state)), 0);
 
@@ -292,7 +291,6 @@ export class DQNAgent {
             return targets_array;
         });
     
-        // Performing the asynchronous operation outside of tf.tidy
         const states_tensor = states;
         const targets_tensor = tf.tensor2d(targets, [this.batch_size, this.action_size]);
 
@@ -306,7 +304,6 @@ export class DQNAgent {
             }
         );
 
-        // Dispose the tensors after use
         states_tensor.dispose();
         targets_tensor.dispose();
         states.dispose();

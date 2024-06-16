@@ -1,6 +1,5 @@
 import { Environment } from "./environment.js";
 import { A2CAgent } from "./A2CAgent.js";
-import { DQNAgent } from "./DQNAgent.js";
 
 document.getElementById('back_icon').addEventListener('click', function() {
     window.location.href = '../index.html';
@@ -27,7 +26,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
     const form = event.target;
     const TOTAL_EPISODES = parseInt(form.episodes.value);
-    const TEST_EPISODES = 500; //TOTAL_EPISODES/100;
+    const TEST_EPISODES = TOTAL_EPISODES/10;
     const modelArchitecture = form.modelArchitecture.value.split('-').map(Number);
     const discountFactor = parseFloat(form.discountFactor.value);
     const learningRate = parseFloat(form.learningRate.value);
@@ -38,7 +37,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
     document.getElementById('renderSpeed').addEventListener('input', function() {
         renderSpeed = parseInt(this.value);
         document.getElementById('renderSpeedValue').textContent = renderSpeed + 'ms';
-        // console.log('Render Speed:', renderSpeed);
     });
 
     console.log('Episodes:', TOTAL_EPISODES);
@@ -60,7 +58,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
         const env = new Environment(100);
         const a2c_agent = new A2CAgent('red', env.board_col * env.board_row,env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, render);
         a2c_agent.load_model("a2c_agent");
-        // const dqn_agent = new DQNAgent('green', env.board_col * env.board_row, env.action_size, TOTAL_EPISODES, modelArchitecture, discountFactor, learningRate, batchSize, render);
         
         let state, next_state, turn, reward, done, action, possible_actions;
         let a2c_agent_win_count = 0;
@@ -91,20 +88,11 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                 else {
                     const random_index = Math.floor(Math.random() * possible_actions.length);
                     action = possible_actions[random_index];
-                    // action = dqn_agent.get_action(state, possible_actions);
                 }
-
-                // if(previous_state !== undefined && turn == a2c_agent.turn) {
-                //     // 이전 상태와 행동에 대해 메모리에 추가
-                //     dqn_agent.append_sample(previous_state, previous_action, previous_reward - reward, next_state, done);
-                // }
 
                 ({next_state, turn, reward, done} = env.step(action));
 
                 await a2c_agent.train_model(state, action, reward, next_state, done, possible_actions);
-                // if(turn == dqn_agent.turn && dqn_agent.memory.length >= dqn_agent.train_start) {
-                //     dqn_agent.train_model();
-                // }
 
                 previous_state = state;
                 previous_action = action;
@@ -126,8 +114,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
                 if (done) {
                     env.reset();
-                    // dqn_agent.append_sample(previous_state, previous_action, previous_reward, next_state, done);
-                    // dqn_agent.update_target_model();
 
                     if(score > 0) {
                         a2c_agent_win_count++;
@@ -159,7 +145,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
                     if (e % 500 == 0) {
                         // 500 epi 마다 모델 저장
                         await a2c_agent.save_model("a2c_agent");
-                        // await dqn_agent.save_model("dqn_agent");
                     }
 
                     console.log(`episode: ${e}, score: ${score}, timestep: ${global_timesteps} (+${local_timesteps})`);
@@ -230,8 +215,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
         await a2c_agent.save_model("a2c_agent");
         await a2c_agent.save_model_to_file("a2c_agent");
-        // await dqn_agent.save_model("dqn_agent");
-        // await dqn_agent.save_model_to_file("dqn_agent");
     } catch (error) {
         console.log('에러 발생:', error.message);
     } finally {

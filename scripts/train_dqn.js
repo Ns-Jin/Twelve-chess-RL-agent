@@ -26,7 +26,7 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
 
     const form = event.target;
     const TOTAL_EPISODES = parseInt(form.episodes.value);
-    const TEST_EPISODES = TOTAL_EPISODES / 100;
+    const TEST_EPISODES = TOTAL_EPISODES / 10;
     const modelArchitecture = form.modelArchitecture.value.split('-').map(Number);
     const discountFactor = parseFloat(form.discountFactor.value);
     const learningRate = parseFloat(form.learningRate.value);
@@ -37,7 +37,6 @@ document.getElementById('modelConfigForm').onsubmit = async function(event) {
     document.getElementById('renderSpeed').addEventListener('input', function() {
         renderSpeed = parseInt(this.value);
         document.getElementById('renderSpeedValue').textContent = renderSpeed + 'ms';
-        // console.log('Render Speed:', renderSpeed);
     });
 
     console.log('Episodes:', TOTAL_EPISODES);
